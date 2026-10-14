@@ -3,6 +3,8 @@
   'use strict';
 
   const STORAGE_KEY = 'secret-dossier-nominees-v1';
+  const DRAFT_KEY = 'secret-dossier-editor-drafts-v1';
+  const NEW_DRAFT_KEY = '__new__';
   const PAGE_SIZE = 12;
   const MAX_PROFILES = 150;
   const MAX_PHOTO_CHARS = 78000;
@@ -18,7 +20,7 @@
   const state = {
     nominees: DEMO.map((person) => ({ ...person, traits: [...person.traits] })),
     screen: 'start', index: 0, stage: 'secret', galleryPage: 0,
-    revealed: new Set(), selectedId: null, draftPhoto: null, editorVersion: 0,
+    revealed: new Set(), selectedId: null, selectedKey: null, draftPhoto: null, drafts: Object.create(null), editorBaseline: null, editorVersion: 0, autosaveTimer: null,
     sound: false, audioContext: null, scanFrame: null,
     controlsTimer: null, toastTimer: null
   };
@@ -72,6 +74,131 @@
     return `person-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
+  function normalizeDraft(value, key) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Неверный формат черновика.');
+    const fields = ['name', 'position', 'department', 'power', 'award'];
+    const draft = { id: key === NEW_DRAFT_KEY ? value.id : key };
+    if (typeof draft.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(draft.id)) throw new Error('Неверный идентификатор черновика.');
+    for (const field of fields) {
+      if (typeof value[field] !== 'string' || value[field].length > (field === 'power' ? 300 : 120)) throw new Error('Повреждены поля черновика.');
+      draft[field] = value[field];
+    }
+    if (!Array.isArray(value.traits) || value.traits.length !== 3 || value.traits.some((trait) => typeof trait !== 'string' || trait.length > 180)) throw new Error('Повреждены характеристики черновика.');
+    draft.traits = [...value.traits];
+    draft.photo = value.photo == null ? null : value.photo;
+    if (draft.photo !== null && (typeof draft.photo !== 'string' || draft.photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(draft.photo))) throw new Error('Повреждена фотография черновика.');
+    return draft;
+  }
+
+  function loadDrafts() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.version !== 1 || !saved.entries || typeof saved.entries !== 'object' || Array.isArray(saved.entries)) throw new Error('Неверный формат сохранённых черновиков.');
+      for (const [key, value] of Object.entries(saved.entries)) {
+        if (key === NEW_DRAFT_KEY || state.nominees.some((person) => person.id === key)) state.drafts[key] = normalizeDraft(value, key);
+      }
+      if (saved.selectedKey === NEW_DRAFT_KEY || state.nominees.some((person) => person.id === saved.selectedKey)) state.selectedKey = saved.selectedKey;
+    } catch (error) {
+      setTimeout(() => notice(`Черновики не прочитаны: ${error.message}`, true), 100);
+    }
+  }
+
+  function writeDrafts() {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 1, selectedKey: state.selectedKey, entries: state.drafts }));
+  }
+
+  function setSaveStatus(message, error = false) {
+    $('saveStatus').textContent = message;
+    $('saveStatus').classList.toggle('save-error', error);
+  }
+
+  function isCompleteDraft(draft) {
+    return ['name', 'position', 'department', 'power', 'award'].every((key) => draft[key].trim()) && draft.traits.every((trait) => trait.trim());
+  }
+
+  function commitCompleteDrafts() {
+    clearTimeout(state.autosaveTimer);
+    const next = [...state.nominees];
+    const completed = [];
+    let newId = null;
+    for (const [key, draft] of Object.entries(state.drafts)) {
+      if (!isCompleteDraft(draft)) continue;
+      let person;
+      try { person = validateNominees([draft])[0]; }
+      catch (error) { setSaveStatus('ОШИБКА СОХРАНЕНИЯ', true); notice(error.message, true); return false; }
+      const index = next.findIndex((item) => item.id === person.id);
+      if (key === NEW_DRAFT_KEY) {
+        if (index >= 0) next[index] = person;
+        else next.push(person);
+        newId = person.id;
+      } else if (index >= 0) next[index] = person;
+      else continue;
+      completed.push(key);
+    }
+    if (!completed.length) return true;
+    if (!saveData(next)) { setSaveStatus('ОШИБКА СОХРАНЕНИЯ', true); return false; }
+    for (const key of completed) delete state.drafts[key];
+    if (newId && state.selectedKey === NEW_DRAFT_KEY) {
+      state.selectedId = newId;
+      state.selectedKey = newId;
+      $('formTitle').textContent = 'РЕДАКТИРОВАТЬ ДОСЬЕ';
+      $('formIndex').textContent = `ОБЪЕКТ / ${String(state.nominees.findIndex((item) => item.id === newId) + 1).padStart(3, '0')}`;
+    }
+    try { writeDrafts(); }
+    catch (error) { notice(`Досье сохранено, но черновик не очищен: ${error.message}`, true); }
+    if (state.screen === 'editor') {
+      renderList();
+      const currentDraft = state.drafts[state.selectedId ?? NEW_DRAFT_KEY];
+      setSaveStatus(currentDraft ? (isCompleteDraft(currentDraft) ? 'СОХРАНЯЕТСЯ...' : 'ЧЕРНОВИК СОХРАНЁН') : 'СОХРАНЕНО АВТОМАТИЧЕСКИ');
+    }
+    return true;
+  }
+
+  function captureDraft() {
+    const key = state.selectedId ?? NEW_DRAFT_KEY;
+    return {
+      id: key === NEW_DRAFT_KEY ? (state.drafts[key]?.id ?? makeId()) : key,
+      name: $('fieldName').value, position: $('fieldPosition').value,
+      department: $('fieldDepartment').value, power: $('fieldPower').value,
+      traits: [1, 2, 3].map((number) => $(`fieldTrait${number}`).value),
+      award: $('fieldAward').value, photo: state.draftPhoto
+    };
+  }
+
+  function saveDraft() {
+    const key = state.selectedId ?? NEW_DRAFT_KEY;
+    const draft = captureDraft();
+    state.drafts[key] = draft;
+    state.selectedKey = key;
+    try {
+      writeDrafts();
+      setSaveStatus(isCompleteDraft(draft) ? 'СОХРАНЯЕТСЯ...' : 'ЧЕРНОВИК СОХРАНЁН');
+      if (isCompleteDraft(draft)) {
+        clearTimeout(state.autosaveTimer);
+        state.autosaveTimer = setTimeout(commitCompleteDrafts, 350);
+      }
+    } catch (error) {
+      setSaveStatus('ОШИБКА СОХРАНЕНИЯ', true);
+      notice(`Черновик не сохранён: ${error.message}`, true);
+    }
+  }
+
+  function discardDraft(key) {
+    delete state.drafts[key];
+    try { writeDrafts(); }
+    catch (error) { notice(`Не удалось удалить черновик: ${error.message}`, true); }
+  }
+
+  function clearDrafts() {
+    clearTimeout(state.autosaveTimer);
+    state.drafts = Object.create(null);
+    state.selectedKey = null;
+    try { localStorage.removeItem(DRAFT_KEY); }
+    catch (error) { notice(`Не удалось очистить черновики: ${error.message}`, true); }
+  }
+
   function loadData() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -79,6 +206,8 @@
     } catch (error) {
       setTimeout(() => notice(`Сохранённые данные не прочитаны: ${error.message}. Показаны демонстрационные досье.`, true), 100);
     }
+    loadDrafts();
+    commitCompleteDrafts();
     updateCounts();
   }
 
@@ -115,6 +244,7 @@
 
   function openStart() {
     if (state.stage === 'scanning') return;
+    if (state.screen === 'editor') commitCompleteDrafts();
     showScreen('start');
   }
 
@@ -343,7 +473,8 @@
 
   function openEditor() {
     showScreen('editor');
-    selectNominee(state.nominees[0]?.id ?? null);
+    const key = state.selectedKey;
+    selectNominee(key === NEW_DRAFT_KEY ? null : (state.nominees.some((person) => person.id === key) ? key : state.nominees[0]?.id ?? null));
   }
 
   function renderList() {
@@ -387,16 +518,23 @@
 
   function selectNominee(id) {
     const person = state.nominees.find((item) => item.id === id);
+    const key = person?.id ?? NEW_DRAFT_KEY;
+    const draft = state.drafts[key];
     state.editorVersion++;
     state.selectedId = person?.id ?? null;
-    state.draftPhoto = person?.photo ?? null;
+    state.selectedKey = key;
+    state.editorBaseline = person ? { ...person, traits: [...person.traits] } : null;
+    state.draftPhoto = draft ? draft.photo : person?.photo ?? null;
     $('nomineeForm').reset();
     $('formTitle').textContent = person ? 'РЕДАКТИРОВАТЬ ДОСЬЕ' : 'НОВОЕ ДОСЬЕ';
     $('formIndex').textContent = person ? `ОБЪЕКТ / ${String(state.nominees.indexOf(person) + 1).padStart(3, '0')}` : 'НОВЫЙ ОБЪЕКТ';
-    for (const [key, field] of [['name', 'fieldName'], ['position', 'fieldPosition'], ['department', 'fieldDepartment'], ['power', 'fieldPower'], ['award', 'fieldAward']]) $(field).value = person?.[key] ?? '';
-    for (let i = 0; i < 3; i++) $(`fieldTrait${i + 1}`).value = person?.traits[i] ?? '';
+    for (const [fieldName, field] of [['name', 'fieldName'], ['position', 'fieldPosition'], ['department', 'fieldDepartment'], ['power', 'fieldPower'], ['award', 'fieldAward']]) $(field).value = draft ? draft[fieldName] : person?.[fieldName] ?? '';
+    for (let i = 0; i < 3; i++) $(`fieldTrait${i + 1}`).value = draft ? draft.traits[i] : person?.traits[i] ?? '';
     updatePhotoPreview();
     renderList();
+    setSaveStatus(draft ? (isCompleteDraft(draft) ? 'СОХРАНЯЕТСЯ...' : 'ЧЕРНОВИК СОХРАНЁН') : 'АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО');
+    try { writeDrafts(); }
+    catch (error) { setSaveStatus('ОШИБКА СОХРАНЕНИЯ', true); notice(`Не удалось сохранить выбор досье: ${error.message}`, true); }
   }
 
   function updatePhotoPreview() {
@@ -420,8 +558,9 @@
     if (!form.reportValidity()) return;
     try {
       const previous = state.nominees.find((item) => item.id === state.selectedId);
+      const key = state.selectedId ?? NEW_DRAFT_KEY;
       const person = {
-        id: previous?.id ?? makeId(),
+        id: previous?.id ?? state.drafts[NEW_DRAFT_KEY]?.id ?? makeId(),
         name: validText($('fieldName').value, 120, 'ФИО'),
         position: validText($('fieldPosition').value, 120, 'Должность'),
         department: validText($('fieldDepartment').value, 120, 'Подразделение'),
@@ -436,8 +575,27 @@
         if (next.length >= MAX_PROFILES) throw new Error(`Можно добавить не более ${MAX_PROFILES} сотрудников.`);
         next.push(person);
       }
-      if (saveData(next, previous ? 'Досье обновлено.' : 'Досье добавлено.')) selectNominee(person.id);
+      if (saveData(next, previous ? 'Досье обновлено.' : 'Досье добавлено.')) {
+        discardDraft(key);
+        selectNominee(person.id);
+      }
     } catch (error) { notice(error.message, true); }
+  }
+
+  function cancelEdit() {
+    clearTimeout(state.autosaveTimer);
+    const id = state.selectedId;
+    const baseline = state.editorBaseline;
+    const current = state.nominees.find((person) => person.id === id);
+    if (baseline && current && JSON.stringify(baseline) !== JSON.stringify(current)) {
+      const next = state.nominees.map((person) => person.id === id ? baseline : person);
+      if (!saveData(next)) return;
+    } else if (!baseline && current) {
+      if (!saveData(state.nominees.filter((person) => person.id !== id))) return;
+    }
+    discardDraft(id ?? NEW_DRAFT_KEY);
+    if (!baseline && id) discardDraft(NEW_DRAFT_KEY);
+    selectNominee(baseline?.id ?? state.nominees[0]?.id ?? null);
   }
 
   function reorder(index, delta) {
@@ -452,7 +610,10 @@
     const person = state.nominees.find((item) => item.id === id);
     if (!person || !window.confirm(`Удалить досье «${person.name}»?`)) return;
     const next = state.nominees.filter((item) => item.id !== id);
-    if (saveData(next, 'Досье удалено.')) selectNominee(next[0]?.id ?? null);
+    if (saveData(next, 'Досье удалено.')) {
+      discardDraft(id);
+      selectNominee(next[0]?.id ?? null);
+    }
   }
 
   function resizePhoto(file) {
@@ -499,11 +660,13 @@
       if (version !== state.editorVersion) return;
       state.draftPhoto = photo;
       updatePhotoPreview();
-      notice('Фотография подготовлена. Нажмите «Сохранить досье».');
+      saveDraft();
+      notice('Фотография добавлена в автосохранение.');
     } catch (error) { notice(error.message, true); }
   }
 
   function exportData() {
+    commitCompleteDrafts();
     const content = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), nominees: state.nominees }, null, 2);
     const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -537,14 +700,20 @@
       const imported = validateNominees(parsed.nominees);
       await checkImportedPhotos(imported);
       if (!window.confirm(`Заменить текущие ${state.nominees.length} досье на ${imported.length} из файла?`)) return;
-      if (saveData(imported, `Импортировано досье: ${imported.length}.`)) selectNominee(imported[0]?.id ?? null);
+      if (saveData(imported, `Импортировано досье: ${imported.length}.`)) {
+        clearDrafts();
+        selectNominee(imported[0]?.id ?? null);
+      }
     } catch (error) { notice(`Импорт не выполнен: ${error.message}`, true); }
   }
 
   function resetDemo() {
     if (!window.confirm('Удалить текущие досье и восстановить три демонстрационных профиля? Сначала экспортируйте данные, если хотите сохранить их.')) return;
     const demo = DEMO.map((person) => ({ ...person, traits: [...person.traits] }));
-    if (saveData(demo, 'Демонстрационные данные восстановлены.')) selectNominee(demo[0].id);
+    if (saveData(demo, 'Демонстрационные данные восстановлены.')) {
+      clearDrafts();
+      selectNominee(demo[0].id);
+    }
   }
 
   function keyboard(event) {
@@ -614,9 +783,10 @@
     $('galleryNext').addEventListener('click', () => changeGalleryPage(1));
     $('newNomineeButton').addEventListener('click', () => selectNominee(null));
     $('nomineeForm').addEventListener('submit', saveForm);
-    $('cancelEditButton').addEventListener('click', () => selectNominee(state.selectedId ?? state.nominees[0]?.id ?? null));
+    $('nomineeForm').addEventListener('input', saveDraft);
+    $('cancelEditButton').addEventListener('click', cancelEdit);
     $('photoFile').addEventListener('change', onPhotoSelected);
-    $('removePhotoButton').addEventListener('click', () => { state.draftPhoto = null; updatePhotoPreview(); });
+    $('removePhotoButton').addEventListener('click', () => { state.draftPhoto = null; updatePhotoPreview(); saveDraft(); });
     $('exportButton').addEventListener('click', exportData);
     $('importButton').addEventListener('click', () => $('importFile').click());
     $('importFile').addEventListener('change', importData);
