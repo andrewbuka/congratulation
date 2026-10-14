@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07121d">
+  <title>Секретное досье — Герои нашего института</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <canvas id="ambientCanvas" aria-hidden="true"></canvas>
+  <div class="ambient-grid" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="masthead">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="brand-copy"><strong>ИНСТИТУТ МИКРОБИОЛОГИИ</strong><small>Отдел необычных открытий</small></div>
+      <div class="masthead-code">АРХИВ / <span id="headerStatus">ДОСТУП ОТКРЫТ</span></div>
+    </header>
+
+    <main>
+      <section id="startScreen" class="screen start-screen" aria-labelledby="startTitle">
+        <div class="start-copy">
+          <div class="eyebrow"><span class="live-dot"></span> ПРОТОКОЛ ТОРЖЕСТВЕННОГО РАССЕКРЕЧИВАНИЯ</div>
+          <p class="start-index">АРХИВНЫЙ ФОНД / 2026</p>
+          <h1 id="startTitle">СЕКРЕТНОЕ<br><em>ДОСЬЕ</em><span class="title-period">.</span></h1>
+          <p class="start-subtitle">Герои нашего института</p>
+          <div class="start-rule"></div>
+          <p class="start-description">Результаты многолетних наблюдений.<br>Материалы готовы к рассекречиванию.</p>
+          <div class="start-actions">
+            <button id="startButton" class="button button-primary button-large" type="button"><span>НАЧАТЬ ЦЕРЕМОНИЮ</span><span aria-hidden="true">→</span></button>
+            <button id="editorOpenButton" class="button button-ghost" type="button">РЕДАКТОР <span aria-hidden="true">→</span></button>
+          </div>
+          <div class="start-meta"><span>СЕКРЕТНЫХ ДОСЬЕ: <b id="startCount">03</b></span><span>СТАТУС: <b>ГОТОВО К ПОКАЗУ</b></span></div>
+        </div>
+        <div class="start-visual" aria-hidden="true">
+          <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-orbit orbit-three"></div>
+          <div class="orbit-cross cross-one">+</div><div class="orbit-cross cross-two">+</div>
+          <svg class="molecule molecule-one" viewBox="0 0 180 180"><path d="M24 90 64 44l51 10 37 44-45 43-58-13Z M64 44l-15 84m66-74-8 87M24 90l128 8"/><circle cx="24" cy="90" r="5"/><circle cx="64" cy="44" r="5"/><circle cx="115" cy="54" r="5"/><circle cx="152" cy="98" r="5"/><circle cx="107" cy="141" r="5"/><circle cx="49" cy="128" r="5"/></svg>
+          <div class="hero-core"><span class="core-label">ОБЪЕКТ</span><strong>?</strong><span class="core-bottom">ИДЕНТИФИКАЦИЯ<br>ОЖИДАЕТСЯ</span></div>
+          <div class="visual-caption caption-top">БИОМЕТРИЧЕСКИЙ АНАЛИЗ / 01</div>
+          <div class="visual-caption caption-bottom">НЕОБЫКНОВЕННЫЕ ЛЮДИ<br>СРЕДИ НАС</div>
+        </div>
+      </section>
+
+      <section id="ceremonyScreen" class="screen ceremony-screen" aria-labelledby="caseHeading" hidden>
+        <div class="case-topline">
+          <div><span class="overline">СЕКРЕТНЫЙ АРХИВ / СЕРИЯ 01</span><h2 id="caseHeading">НАУЧНОЕ ДОСЬЕ <span id="caseNumber">№ 001</span></h2></div>
+          <div class="case-count"><span id="casePosition">01 / 03</span><small>ОБЪЕКТОВ ИССЛЕДОВАНИЯ</small></div>
+        </div>
+        <div class="case-layout">
+          <div class="case-main">
+            <div id="secretContent" class="secret-content">
+              <div class="section-tag"><span class="tag-line"></span> ОБЪЕКТ ЗАСЕКРЕЧЕН</div>
+              <p class="case-label">СЕКРЕТНАЯ СУПЕРСИЛА</p>
+              <h3 id="secretPower" class="power-text"></h3>
+              <div class="traits-heading"><span>РЕЗУЛЬТАТЫ НАБЛЮДЕНИЙ</span><span>01 — 03</span></div>
+              <div id="traitCards" class="trait-cards"></div>
+              <div class="secret-status"><span class="status-spinner" aria-hidden="true"></span><span>ЛИЧНОСТЬ УСТАНАВЛИВАЕТСЯ<span class="typing-dots" aria-hidden="true">...</span></span></div>
+            </div>
+            <div id="revealedContent" class="revealed-content" hidden>
+              <div class="section-tag gold-tag"><span class="tag-line"></span> ЛИЧНОСТЬ УСТАНОВЛЕНА</div>
+              <p class="case-label">НАШ ГЕРОЙ</p>
+              <h3 id="revealedName" class="revealed-name"></h3>
+              <div class="reveal-rule"></div>
+              <p id="revealedPosition" class="revealed-position"></p>
+              <p id="revealedDepartment" class="revealed-department"></p>
+              <div class="award-plaque"><span class="award-icon" aria-hidden="true">✦</span><div><small>НАГРАДА</small><strong id="revealedAward"></strong></div></div>
+              <p class="revealed-note">За профессионализм, преданность делу и вклад в жизнь нашего института.</p>
+            </div>
+          </div>
+          <div class="portrait-column">
+            <div id="portraitFrame" class="portrait-frame">
+              <div class="portrait-rings" aria-hidden="true"></div>
+              <div class="portrait-window">
+                <div class="portrait-noise" aria-hidden="true"></div>
+                <svg id="portraitSilhouette" class="portrait-silhouette" viewBox="0 0 400 500" aria-label="Стилизованный силуэт" role="img"><defs><linearGradient id="silhouetteFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#385c72"/><stop offset="1" stop-color="#152c3d"/></linearGradient></defs><circle cx="200" cy="190" r="91" fill="url(#silhouetteFill)"/><path d="M38 500c9-110 77-171 162-171s153 61 162 171" fill="url(#silhouetteFill)"/><path d="M109 167c13-61 58-99 91-99s78 38 91 99" fill="none" stroke="#81c5cc" stroke-opacity=".55" stroke-width="3"/><path d="M80 480c20-72 55-105 120-105s100 33 120 105" fill="none" stroke="#81c5cc" stroke-opacity=".3" stroke-width="2"/></svg>
+                <img id="portraitPhoto" class="portrait-photo" alt="" hidden>
+                <div class="portrait-scan" aria-hidden="true"></div>
+                <div class="portrait-corner corner-tl"></div><div class="portrait-corner corner-tr"></div><div class="portrait-corner corner-bl"></div><div class="portrait-corner corner-br"></div>
+              </div>
+              <div class="portrait-caption"><span id="portraitLabel">ДАННЫЕ СКРЫТЫ</span><span id="portraitSerial">ОБЪЕКТ / 001</span></div>
+            </div>
+            <p class="portrait-footnote">ИНСТИТУТ МИКРОБИОЛОГИИ <span>—</span> ЛЮДИ НАУКИ</p>
+          </div>
+        </div>
+        <div id="scanOverlay" class="scan-overlay" role="status" aria-live="polite" hidden>
+          <div class="scan-overlay-inner"><span class="scan-symbol" aria-hidden="true">◎</span><p id="scanMessage">ЗАПУСК ПРОЦЕДУРЫ ИДЕНТИФИКАЦИИ</p><div class="scan-progress"><span id="scanProgress"></span></div><small id="scanPercent">00%</small></div>
+        </div>
+        <nav id="ceremonyControls" class="ceremony-controls controls-visible" aria-label="Управление церемонией">
+          <button id="prevButton" class="control-button" type="button" title="Предыдущее досье (←)"><span aria-hidden="true">←</span><span>НАЗАД</span></button>
+          <button id="mainActionButton" class="control-button control-primary" type="button" title="Пробел"><span id="mainActionLabel">РАССЕКРЕТИТЬ</span><span aria-hidden="true">→</span></button>
+          <button id="nextButton" class="control-button" type="button" title="Следующее досье (→)"><span>ДАЛЕЕ</span><span aria-hidden="true">→</span></button>
+          <span class="controls-separator"></span>
+          <button id="restartButton" class="control-icon" type="button" title="Повторить рассекречивание (R)" aria-label="Повторить рассекречивание">↺</button>
+          <button id="soundButton" class="control-icon" type="button" title="Звук (M)" aria-label="Включить звук" aria-pressed="false">♪̸</button>
+          <button id="fullscreenButton" class="control-icon" type="button" title="Полный экран (F)" aria-label="Полный экран">⛶</button>
+          <button id="homeButton" class="control-icon" type="button" title="На главный экран" aria-label="На главный экран">⌂</button>
+        </nav>
+        <p class="keyboard-hint">ПРОБЕЛ — РАССЕКРЕТИТЬ / ДАЛЕЕ <span>·</span> ← → — НАВИГАЦИЯ <span>·</span> F — ПОЛНЫЙ ЭКРАН</p>
+      </section>
+
+      <section id="finalScreen" class="screen final-screen" aria-labelledby="finalTitle" hidden>
+        <div class="final-heading"><p class="section-tag gold-tag"><span class="tag-line"></span> ПРОТОКОЛ ЗАВЕРШЁН</p><p class="final-kicker">ИССЛЕДОВАНИЕ ЗАВЕРШЕНО</p><h2 id="finalTitle">НАШЕ ГЛАВНОЕ<br>ОТКРЫТИЕ — <em>ЭТО ЛЮДИ!</em></h2><p>Каждый из них — часть истории нашего института.</p></div>
+        <div class="gallery-heading"><span>ГЕРОИ НАШЕГО ИНСТИТУТА</span><span id="galleryPageLabel">01 / 01</span></div>
+        <div id="finalGallery" class="final-gallery"></div>
+        <div class="final-actions"><button id="galleryPrev" class="button button-ghost" type="button">← ПРЕДЫДУЩАЯ СТРАНИЦА</button><button id="galleryNext" class="button button-ghost" type="button">СЛЕДУЮЩАЯ СТРАНИЦА →</button><button id="finalHomeButton" class="button button-primary" type="button">НА ГЛАВНЫЙ ЭКРАН →</button></div>
+      </section>
+
+      <section id="editorScreen" class="screen editor-screen" aria-labelledby="editorTitle" hidden>
+        <div class="editor-head"><div><p class="section-tag"><span class="tag-line"></span> УПРАВЛЕНИЕ АРХИВОМ</p><h2 id="editorTitle">РЕДАКТОР <em>ДОСЬЕ</em></h2><p>Изменения сохраняются в этом браузере. Перед мероприятием сохраните резервную копию в JSON.</p></div><button id="editorHomeButton" class="button button-ghost" type="button">← НА ГЛАВНЫЙ ЭКРАН</button></div>
+        <div class="editor-layout">
+          <aside class="editor-sidebar"><div class="sidebar-heading"><span>СОТРУДНИКИ <b id="editorCount">03</b></span><button id="newNomineeButton" class="small-add" type="button">+ ДОБАВИТЬ</button></div><div id="nomineeList" class="nominee-list"></div><div class="editor-data-actions"><button id="exportButton" class="button button-small" type="button">↓ ЭКСПОРТ JSON</button><button id="importButton" class="button button-small" type="button">↑ ИМПОРТ JSON</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="resetButton" class="button button-small button-danger" type="button">СБРОСИТЬ ДЕМО-ДАННЫЕ</button></div></aside>
+          <div class="editor-form-panel"><div class="form-heading"><div><span class="overline">ЛИЧНАЯ КАРТОЧКА</span><h3 id="formTitle">НОВОЕ ДОСЬЕ</h3></div><span id="formIndex" class="form-index">НОВЫЙ ОБЪЕКТ</span></div><form id="nomineeForm" novalidate>
+            <div class="form-grid"><label class="field field-full"><span>ФИО <b>*</b></span><input id="fieldName" name="name" maxlength="120" required placeholder="Фамилия Имя Отчество"></label><label class="field"><span>ДОЛЖНОСТЬ <b>*</b></span><input id="fieldPosition" name="position" maxlength="120" required placeholder="Например, научный сотрудник"></label><label class="field"><span>ПОДРАЗДЕЛЕНИЕ <b>*</b></span><input id="fieldDepartment" name="department" maxlength="120" required placeholder="Например, научная лаборатория"></label><label class="field field-full"><span>СЕКРЕТНАЯ СУПЕРСИЛА <b>*</b></span><textarea id="fieldPower" name="power" maxlength="300" rows="3" required placeholder="Что делает этого человека особенным?"></textarea></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 01 <b>*</b></span><input id="fieldTrait1" maxlength="180" required placeholder="Профессионализм — подтверждён практикой"></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 02 <b>*</b></span><input id="fieldTrait2" maxlength="180" required></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 03 <b>*</b></span><input id="fieldTrait3" maxlength="180" required></label><label class="field field-full"><span>НАГРАДА <b>*</b></span><input id="fieldAward" maxlength="120" list="awardOptions" required placeholder="Почётная грамота"><datalist id="awardOptions"><option value="Почётная грамота"></option><option value="Благодарность"></option></datalist></label></div>
+            <div class="photo-upload"><div id="editorPhotoPreview" class="photo-preview"><span>◎</span></div><div><label for="photoFile" class="button button-small upload-label">↑ ЗАГРУЗИТЬ ФОТОГРАФИЮ</label><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><p>JPG, PNG или WebP. Изображение будет уменьшено для надёжного сохранения.</p><button id="removePhotoButton" class="text-button" type="button">УДАЛИТЬ ФОТОГРАФИЮ</button></div></div>
+            <div class="form-actions"><button id="saveNomineeButton" class="button button-primary" type="submit">СОХРАНИТЬ ДОСЬЕ</button><button id="cancelEditButton" class="button button-ghost" type="button">ОТМЕНА</button></div>
+          </form></div>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</body>
+</html>
