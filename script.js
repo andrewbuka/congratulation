@@ -5,6 +5,7 @@
   const STORAGE_KEY = 'secret-dossier-nominees-v1';
   const DRAFT_KEY = 'secret-dossier-editor-drafts-v1';
   const PRESENTATION_KEY = 'secret-dossier-presentation-v1';
+  const PRESENTATION_HASH = '#dossier-state=';
   const NEW_DRAFT_KEY = '__new__';
   const PAGE_SIZE = 12;
   const MAX_PROFILES = 150;
@@ -20,7 +21,7 @@
 
   const state = {
     nominees: DEMO.map((person) => ({ ...person, traits: [...person.traits] })),
-    screen: 'start', index: 0, stage: 'secret', galleryPage: 0, presentationReady: false,
+    screen: 'start', index: 0, stage: 'secret', galleryPage: 0, presentationReady: false, presentationWarningShown: false,
     revealed: new Set(), selectedId: null, selectedKey: null, draftPhoto: null, drafts: Object.create(null), editorBaseline: null, editorVersion: 0, autosaveTimer: null,
     sound: false, audioContext: null, scanFrame: null,
     controlsTimer: null, toastTimer: null
@@ -249,17 +250,40 @@
       revealedIds: [...state.revealed],
       galleryPage: state.galleryPage
     };
-    try { localStorage.setItem(PRESENTATION_KEY, JSON.stringify(snapshot)); }
-    catch (error) { notice(`Не удалось сохранить ход церемонии: ${error.message}`, true); }
+    const serialized = JSON.stringify(snapshot);
+    const hash = `${PRESENTATION_HASH}${encodeURIComponent(serialized)}`;
+    let hashSaved = location.hash === hash;
+    if (!hashSaved) {
+      try { history.replaceState(history.state, '', hash); hashSaved = true; }
+      catch (_) {
+        try { location.hash = hash; hashSaved = true; }
+        catch (_) { /* Сообщение об ошибке показывается ниже. */ }
+      }
+    }
+    try { localStorage.setItem(PRESENTATION_KEY, serialized); }
+    catch (error) {
+      if (!state.presentationWarningShown) {
+        notice(hashSaved
+          ? 'LocalStorage недоступен: при обновлении этой вкладки ход церемонии сохранится в её адресе. Не закрывайте вкладку.'
+          : `Не удалось сохранить ход церемонии: ${error.message}`, true);
+        state.presentationWarningShown = true;
+      }
+    }
   }
 
   function restorePresentation() {
     let saved = null;
+    if (location.hash.startsWith(PRESENTATION_HASH)) {
+      try { saved = JSON.parse(decodeURIComponent(location.hash.slice(PRESENTATION_HASH.length))); }
+      catch (_) { /* Если адрес повреждён, проверяем LocalStorage. */ }
+    }
     try {
-      const raw = localStorage.getItem(PRESENTATION_KEY);
-      if (raw) saved = JSON.parse(raw);
+      if (!saved || saved.version !== 1) {
+        const raw = localStorage.getItem(PRESENTATION_KEY);
+        if (raw) saved = JSON.parse(raw);
+      }
     } catch (error) {
-      notice(`Не удалось восстановить ход церемонии: ${error.message}`, true);
+      if (!saved || saved.version !== 1) notice(`Не удалось восстановить ход церемонии: ${error.message}`, true);
     }
     state.presentationReady = true;
     if (!saved || saved.version !== 1 || !state.nominees.length) return;
