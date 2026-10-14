@@ -7,6 +7,7 @@
   const PRESENTATION_KEY = 'secret-dossier-presentation-v1';
   const PRESENTATION_HASH = '#dossier-state=';
   const NEW_DRAFT_KEY = '__new__';
+  const DEFAULT_AWARD_REASON = 'За профессионализм, преданность делу и вклад в жизнь нашего института.';
   const PAGE_SIZE = 12;
   const MAX_PROFILES = 150;
   const MAX_PHOTO_CHARS = 78000;
@@ -14,9 +15,9 @@
   const $ = (id) => document.getElementById(id);
 
   const DEMO = [
-    { id: 'demo-anna', name: 'Анна Сергеевна Иванова', department: 'Научная лаборатория', position: 'Научный сотрудник', power: 'Способность превращать самые смелые гипотезы в научные результаты.', traits: ['Научная любознательность: безграничная.', 'Настойчивость: 100%.', 'Способность находить ответы: подтверждена экспериментально.'], award: 'Почётная грамота', photo: null },
-    { id: 'demo-sergey', name: 'Сергей Петрович Ковалёв', department: 'Инженерно-техническая служба', position: 'Инженер', power: 'Умение возвращать к жизни технику, которую остальные уже мысленно списали.', traits: ['Устойчивость к техническим неожиданностям: высокая.', 'Изобретательность: практически неисчерпаемая.', 'Репутация среди оборудования: легендарная.'], award: 'Благодарность', photo: null },
-    { id: 'demo-elena', name: 'Елена Викторовна Смирнова', department: 'Административный отдел', position: 'Специалист', power: 'Умение одновременно решать десять задач и сохранять абсолютное спокойствие.', traits: ['Многозадачность: феноменальная.', 'Организованность: эталонная.', 'Соблюдение сроков: подтверждено многолетними наблюдениями.'], award: 'Почётная грамота', photo: null }
+    { id: 'demo-anna', name: 'Анна Сергеевна Иванова', department: 'Научная лаборатория', position: 'Научный сотрудник', power: 'Способность превращать самые смелые гипотезы в научные результаты.', traits: ['Научная любознательность: безграничная.', 'Настойчивость: 100%.', 'Способность находить ответы: подтверждена экспериментально.'], award: 'Почётная грамота', awardReason: 'За выдающиеся достижения в научных исследованиях и преданность делу.', photo: null },
+    { id: 'demo-sergey', name: 'Сергей Петрович Ковалёв', department: 'Инженерно-техническая служба', position: 'Инженер', power: 'Умение возвращать к жизни технику, которую остальные уже мысленно списали.', traits: ['Устойчивость к техническим неожиданностям: высокая.', 'Изобретательность: практически неисчерпаемая.', 'Репутация среди оборудования: легендарная.'], award: 'Благодарность', awardReason: 'За мастерство, изобретательность и неизменную помощь коллегам.', photo: null },
+    { id: 'demo-elena', name: 'Елена Викторовна Смирнова', department: 'Административный отдел', position: 'Специалист', power: 'Умение одновременно решать десять задач и сохранять абсолютное спокойствие.', traits: ['Многозадачность: феноменальная.', 'Организованность: эталонная.', 'Соблюдение сроков: подтверждено многолетними наблюдениями.'], award: 'Почётная грамота', awardReason: 'За безупречную организацию работы и заботу о каждом сотруднике.', photo: null }
   ];
 
   const state = {
@@ -66,6 +67,7 @@
         power: validText(item.power, 300, `Досье № ${index + 1}, суперсила`),
         traits: item.traits.map((trait, traitIndex) => validText(trait, 180, `Досье № ${index + 1}, характеристика ${traitIndex + 1}`)),
         award: validText(item.award, 120, `Досье № ${index + 1}, награда`),
+        awardReason: item.awardReason == null ? DEFAULT_AWARD_REASON : validText(item.awardReason, 220, `Досье № ${index + 1}, причина награждения`),
         photo
       };
     });
@@ -78,12 +80,13 @@
 
   function normalizeDraft(value, key) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Неверный формат черновика.');
-    const fields = ['name', 'position', 'department', 'power', 'award'];
+    const fields = ['name', 'position', 'department', 'power', 'award', 'awardReason'];
     const draft = { id: key === NEW_DRAFT_KEY ? value.id : key };
     if (typeof draft.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(draft.id)) throw new Error('Неверный идентификатор черновика.');
     for (const field of fields) {
-      if (typeof value[field] !== 'string' || value[field].length > (field === 'power' ? 300 : 120)) throw new Error('Повреждены поля черновика.');
-      draft[field] = value[field];
+      const content = field === 'awardReason' && value[field] == null ? DEFAULT_AWARD_REASON : value[field];
+      if (typeof content !== 'string' || content.length > (field === 'power' ? 300 : field === 'awardReason' ? 220 : 120)) throw new Error('Повреждены поля черновика.');
+      draft[field] = content;
     }
     if (!Array.isArray(value.traits) || value.traits.length !== 3 || value.traits.some((trait) => typeof trait !== 'string' || trait.length > 180)) throw new Error('Повреждены характеристики черновика.');
     draft.traits = [...value.traits];
@@ -117,7 +120,7 @@
   }
 
   function isCompleteDraft(draft) {
-    return ['name', 'position', 'department', 'power', 'award'].every((key) => draft[key].trim()) && draft.traits.every((trait) => trait.trim());
+    return ['name', 'position', 'department', 'power', 'award', 'awardReason'].every((key) => draft[key].trim()) && draft.traits.every((trait) => trait.trim());
   }
 
   function commitCompleteDrafts() {
@@ -165,7 +168,7 @@
       name: $('fieldName').value, position: $('fieldPosition').value,
       department: $('fieldDepartment').value, power: $('fieldPower').value,
       traits: [1, 2, 3].map((number) => $(`fieldTrait${number}`).value),
-      award: $('fieldAward').value, photo: state.draftPhoto
+      award: $('fieldAward').value, awardReason: $('fieldAwardReason').value, photo: state.draftPhoto
     };
   }
 
@@ -346,6 +349,7 @@
     $('portraitSerial').textContent = `ОБЪЕКТ / ${String(state.index + 1).padStart(3, '0')}`;
     $('secretContent').hidden = revealed;
     $('revealedContent').hidden = !revealed;
+    $('ceremonyScreen').classList.toggle('showing-reveal', revealed);
     $('portraitFrame').classList.toggle('is-revealed', revealed);
     $('scanOverlay').hidden = true;
     $('restartButton').disabled = !revealed;
@@ -357,6 +361,9 @@
       $('revealedPosition').textContent = person.position;
       $('revealedDepartment').textContent = person.department;
       $('revealedAward').textContent = person.award;
+      $('revealedAwardReason').textContent = person.awardReason;
+      $('revealedAwardReason').classList.toggle('is-long', person.awardReason.length > 95);
+      $('revealedAwardReason').classList.toggle('is-very-long', person.awardReason.length > 155);
       $('portraitLabel').textContent = 'ЛИЧНОСТЬ УСТАНОВЛЕНА';
       $('portraitPhoto').hidden = !person.photo;
       $('portraitSilhouette').hidden = !!person.photo;
@@ -369,6 +376,7 @@
       $('revealedPosition').textContent = '';
       $('revealedDepartment').textContent = '';
       $('revealedAward').textContent = '';
+      $('revealedAwardReason').textContent = '';
       $('portraitLabel').textContent = 'ДАННЫЕ СКРЫТЫ';
       $('portraitPhoto').hidden = true;
       $('portraitPhoto').removeAttribute('src');
@@ -601,7 +609,7 @@
     $('nomineeForm').reset();
     $('formTitle').textContent = person ? 'РЕДАКТИРОВАТЬ ДОСЬЕ' : 'НОВОЕ ДОСЬЕ';
     $('formIndex').textContent = person ? `ОБЪЕКТ / ${String(state.nominees.indexOf(person) + 1).padStart(3, '0')}` : 'НОВЫЙ ОБЪЕКТ';
-    for (const [fieldName, field] of [['name', 'fieldName'], ['position', 'fieldPosition'], ['department', 'fieldDepartment'], ['power', 'fieldPower'], ['award', 'fieldAward']]) $(field).value = draft ? draft[fieldName] : person?.[fieldName] ?? '';
+    for (const [fieldName, field] of [['name', 'fieldName'], ['position', 'fieldPosition'], ['department', 'fieldDepartment'], ['power', 'fieldPower'], ['award', 'fieldAward'], ['awardReason', 'fieldAwardReason']]) $(field).value = draft ? draft[fieldName] : person?.[fieldName] ?? '';
     for (let i = 0; i < 3; i++) $(`fieldTrait${i + 1}`).value = draft ? draft.traits[i] : person?.traits[i] ?? '';
     updatePhotoPreview();
     renderList();
@@ -640,6 +648,7 @@
         power: validText($('fieldPower').value, 300, 'Суперсила'),
         traits: [1, 2, 3].map((number) => validText($(`fieldTrait${number}`).value, 180, `Характеристика ${number}`)),
         award: validText($('fieldAward').value, 120, 'Награда'),
+        awardReason: validText($('fieldAwardReason').value, 220, 'Причина награждения'),
         photo: state.draftPhoto
       };
       const next = [...state.nominees];
