@@ -4,6 +4,7 @@
 
   const STORAGE_KEY = 'secret-dossier-nominees-v1';
   const DRAFT_KEY = 'secret-dossier-editor-drafts-v1';
+  const PRESENTATION_KEY = 'secret-dossier-presentation-v1';
   const NEW_DRAFT_KEY = '__new__';
   const PAGE_SIZE = 12;
   const MAX_PROFILES = 150;
@@ -19,7 +20,7 @@
 
   const state = {
     nominees: DEMO.map((person) => ({ ...person, traits: [...person.traits] })),
-    screen: 'start', index: 0, stage: 'secret', galleryPage: 0,
+    screen: 'start', index: 0, stage: 'secret', galleryPage: 0, presentationReady: false,
     revealed: new Set(), selectedId: null, selectedKey: null, draftPhoto: null, drafts: Object.create(null), editorBaseline: null, editorVersion: 0, autosaveTimer: null,
     sound: false, audioContext: null, scanFrame: null,
     controlsTimer: null, toastTimer: null
@@ -216,8 +217,11 @@
       const clean = validateNominees(next);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
       state.nominees = clean;
-      state.revealed.clear();
+      const validIds = new Set(clean.map((person) => person.id));
+      state.revealed = new Set([...state.revealed].filter((id) => validIds.has(id)));
+      state.index = Math.min(state.index, Math.max(0, clean.length - 1));
       updateCounts();
+      savePresentation();
       if (successMessage) notice(successMessage);
       return true;
     } catch (error) {
@@ -234,12 +238,53 @@
     $('startButton').disabled = state.nominees.length === 0;
   }
 
+  function savePresentation() {
+    if (!state.presentationReady) return;
+    const snapshot = {
+      version: 1,
+      screen: state.screen,
+      nomineeId: state.nominees[state.index]?.id ?? null,
+      index: state.index,
+      stage: state.stage === 'scanning' ? 'secret' : state.stage,
+      revealedIds: [...state.revealed],
+      galleryPage: state.galleryPage
+    };
+    try { localStorage.setItem(PRESENTATION_KEY, JSON.stringify(snapshot)); }
+    catch (error) { notice(`Не удалось сохранить ход церемонии: ${error.message}`, true); }
+  }
+
+  function restorePresentation() {
+    let saved = null;
+    try {
+      const raw = localStorage.getItem(PRESENTATION_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch (error) {
+      notice(`Не удалось восстановить ход церемонии: ${error.message}`, true);
+    }
+    state.presentationReady = true;
+    if (!saved || saved.version !== 1 || !state.nominees.length) return;
+    const validIds = new Set(state.nominees.map((person) => person.id));
+    state.revealed = new Set(Array.isArray(saved.revealedIds) ? saved.revealedIds.filter((id) => validIds.has(id)) : []);
+    const byId = state.nominees.findIndex((person) => person.id === saved.nomineeId);
+    state.index = byId >= 0 ? byId : (Number.isInteger(saved.index) ? Math.min(Math.max(0, saved.index), state.nominees.length - 1) : 0);
+    state.stage = saved.stage === 'revealed' && state.revealed.has(state.nominees[state.index].id) ? 'revealed' : 'secret';
+    state.galleryPage = Number.isInteger(saved.galleryPage) ? Math.max(0, saved.galleryPage) : 0;
+    if (saved.screen === 'ceremony') {
+      showScreen('ceremony');
+      renderCeremony();
+    } else if (saved.screen === 'final') {
+      showScreen('final');
+      renderGallery();
+    } else if (saved.screen === 'editor') openEditor();
+  }
+
   function showScreen(screen) {
     state.screen = screen;
     for (const name of ['start', 'ceremony', 'final', 'editor']) $(`${name}Screen`).hidden = name !== screen;
     $('headerStatus').textContent = { start: 'ДОСТУП ОТКРЫТ', ceremony: 'ПРОТОКОЛ АКТИВЕН', final: 'АРХИВ РАСКРЫТ', editor: 'РЕЖИМ РЕДАКТОРА' }[screen];
     window.scrollTo(0, 0);
     if (screen === 'ceremony') showControls();
+    savePresentation();
   }
 
   function openStart() {
@@ -317,6 +362,7 @@
     state.stage = state.revealed.has(state.nominees[next].id) ? 'revealed' : 'secret';
     renderCeremony();
     showControls();
+    savePresentation();
   }
 
   function mainAction() {
@@ -355,6 +401,7 @@
     renderCeremony();
     playSuccessSound();
     showControls();
+    savePresentation();
   }
 
   function restartReveal() {
@@ -362,6 +409,7 @@
     state.revealed.delete(state.nominees[state.index].id);
     state.stage = 'secret';
     renderCeremony();
+    savePresentation();
   }
 
   function showFinal() {
@@ -411,6 +459,7 @@
     if (next < 0 || next >= pages) return;
     state.galleryPage = next;
     renderGallery();
+    savePresentation();
   }
 
   function showControls() {
@@ -701,6 +750,10 @@
       await checkImportedPhotos(imported);
       if (!window.confirm(`Заменить текущие ${state.nominees.length} досье на ${imported.length} из файла?`)) return;
       if (saveData(imported, `Импортировано досье: ${imported.length}.`)) {
+        state.revealed.clear();
+        state.index = 0;
+        state.stage = 'secret';
+        savePresentation();
         clearDrafts();
         selectNominee(imported[0]?.id ?? null);
       }
@@ -711,6 +764,10 @@
     if (!window.confirm('Удалить текущие досье и восстановить три демонстрационных профиля? Сначала экспортируйте данные, если хотите сохранить их.')) return;
     const demo = DEMO.map((person) => ({ ...person, traits: [...person.traits] }));
     if (saveData(demo, 'Демонстрационные данные восстановлены.')) {
+      state.revealed.clear();
+      state.index = 0;
+      state.stage = 'secret';
+      savePresentation();
       clearDrafts();
       selectNominee(demo[0].id);
     }
@@ -798,5 +855,6 @@
 
   bind();
   loadData();
+  restorePresentation();
   startAmbient();
 })();
