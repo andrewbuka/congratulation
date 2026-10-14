@@ -7,6 +7,9 @@
   const PRESENTATION_KEY = 'secret-dossier-presentation-v1';
   const PRESENTATION_HASH = '#dossier-state=';
   const LAUREATES_MIGRATION_KEY = 'secret-dossier-laureates-v1';
+  const GROUP_MIGRATION_KEY = 'secret-dossier-young-scientists-group-v1';
+  const GROUP_ID = 'young-scientists-team';
+  const GROUP_MEMBER_IDS = ['young-scientists-prigodskaya', 'young-scientists-leonovich', 'young-scientists-kantor'];
   const NEW_DRAFT_KEY = '__new__';
   const DEFAULT_AWARD_REASON = 'За профессионализм, преданность делу и вклад в жизнь нашего института.';
   const PAGE_SIZE = 12;
@@ -21,21 +24,28 @@
     { id: 'demo-sergey', name: 'Сергей Петрович Ковалёв', department: 'Инженерно-техническая служба', position: 'Инженер', power: 'Умение возвращать к жизни технику, которую остальные уже мысленно списали.', traits: ['Устойчивость к техническим неожиданностям: высокая.', 'Изобретательность: практически неисчерпаемая.', 'Репутация среди оборудования: легендарная.'], award: 'Благодарность', awardReason: 'За мастерство, изобретательность и неизменную помощь коллегам.', photo: null },
     { id: 'demo-elena', name: 'Елена Викторовна Смирнова', department: 'Административный отдел', position: 'Специалист', power: 'Умение одновременно решать десять задач и сохранять абсолютное спокойствие.', traits: ['Многозадачность: феноменальная.', 'Организованность: эталонная.', 'Соблюдение сроков: подтверждено многолетними наблюдениями.'], award: 'Почётная грамота', awardReason: 'За безупречную организацию работы и заботу о каждом сотруднике.', photo: null }
   ];
-  const DEFAULT_PHOTOS = new Map((Array.isArray(window.LAUREATES) ? window.LAUREATES : [])
+  const SOURCE_LAUREATES = Array.isArray(window.LAUREATES) ? window.LAUREATES : [];
+  const DEFAULT_PHOTOS = new Map(SOURCE_LAUREATES.flatMap((person) => [person, ...(person.members ?? [])])
     .filter((person) => typeof person.photo === 'string')
     .map((person) => [person.id, person.photo]));
-  const LAUREATES = (Array.isArray(window.LAUREATES) ? window.LAUREATES : []).map((person) => ({
-    ...person, traits: [...person.traits], photo: null
-  }));
+  function cloneProfile(person) {
+    return { ...person, traits: [...person.traits], ...(person.members ? { members: person.members.map(cloneProfile) } : {}) };
+  }
+
+  function seedProfile(person) {
+    return { ...cloneProfile(person), photo: null, ...(person.members ? { members: person.members.map(seedProfile) } : {}) };
+  }
+
+  const LAUREATES = SOURCE_LAUREATES.map(seedProfile);
 
   function photoFor(id, photo) {
     return photo === null ? DEFAULT_PHOTOS.get(id) ?? null : photo;
   }
 
   const state = {
-    nominees: LAUREATES.map((person) => ({ ...person, traits: [...person.traits] })),
+    nominees: LAUREATES.map(cloneProfile),
     screen: 'start', index: 0, stage: 'secret', galleryPage: 0, presentationReady: false, presentationWarningShown: false,
-    revealed: new Set(), selectedId: null, selectedKey: null, draftPhoto: null, drafts: Object.create(null), editorBaseline: null, editorVersion: 0, autosaveTimer: null,
+    revealed: new Set(), selectedId: null, selectedKey: null, draftPhoto: null, draftMembers: null, drafts: Object.create(null), editorBaseline: null, editorVersion: 0, autosaveTimer: null,
     sound: false, audioContext: null, scanFrame: null,
     controlsTimer: null, toastTimer: null
   };
@@ -56,7 +66,7 @@
     return value.trim();
   }
 
-  function validateNominees(items) {
+  function validateNominees(items, nested = false) {
     if (!Array.isArray(items) || items.length > MAX_PROFILES) {
       throw new Error(`Файл должен содержать список не более ${MAX_PROFILES} сотрудников.`);
     }
@@ -71,6 +81,9 @@
       if (photo !== null && photo !== '' && (typeof photo !== 'string' || photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo))) {
         throw new Error(`Досье № ${index + 1}: фотография имеет неверный формат или слишком велика.`);
       }
+      if (nested && item.members) throw new Error('Участник группового досье не может содержать другую группу.');
+      const members = item.members == null ? null : item.members;
+      if (members !== null && (!Array.isArray(members) || members.length < 2 || members.length > 6)) throw new Error('В групповом досье должно быть от 2 до 6 участников.');
       return {
         id,
         name: validText(item.name, 120, `Досье № ${index + 1}, ФИО`),
@@ -80,7 +93,8 @@
         traits: item.traits.map((trait, traitIndex) => validText(trait, 180, `Досье № ${index + 1}, характеристика ${traitIndex + 1}`)),
         award: validText(item.award, 120, `Досье № ${index + 1}, награда`),
         awardReason: item.awardReason == null ? DEFAULT_AWARD_REASON : validText(item.awardReason, MAX_REASON_CHARS, `Досье № ${index + 1}, причина награждения`),
-        photo
+        photo,
+        ...(members ? { members: validateNominees(members, true) } : {})
       };
     });
   }
@@ -104,6 +118,10 @@
     draft.traits = [...value.traits];
     draft.photo = value.photo == null ? null : value.photo;
     if (draft.photo !== null && draft.photo !== '' && (typeof draft.photo !== 'string' || draft.photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(draft.photo))) throw new Error('Повреждена фотография черновика.');
+    if (value.members != null) {
+      if (!Array.isArray(value.members) || value.members.length < 2 || value.members.length > 6 || value.members.some((member) => member?.members)) throw new Error('Повреждён список участников черновика.');
+      draft.members = value.members.map((member) => normalizeDraft(member, member?.id));
+    }
     return draft;
   }
 
@@ -132,7 +150,8 @@
   }
 
   function isCompleteDraft(draft) {
-    return ['name', 'position', 'department', 'power', 'award', 'awardReason'].every((key) => draft[key].trim()) && draft.traits.every((trait) => trait.trim());
+    return ['name', 'position', 'department', 'power', 'award', 'awardReason'].every((key) => draft[key].trim())
+      && draft.traits.every((trait) => trait.trim()) && (!draft.members || draft.members.every(isCompleteDraft));
   }
 
   function commitCompleteDrafts() {
@@ -180,7 +199,12 @@
       name: $('fieldName').value, position: $('fieldPosition').value,
       department: $('fieldDepartment').value, power: $('fieldPower').value,
       traits: [1, 2, 3].map((number) => $(`fieldTrait${number}`).value),
-      award: $('fieldAward').value, awardReason: $('fieldAwardReason').value, photo: state.draftPhoto
+      award: $('fieldAward').value, awardReason: $('fieldAwardReason').value, photo: state.draftPhoto,
+      ...(state.draftMembers ? { members: state.draftMembers.map((member, index) => ({
+        ...cloneProfile(member),
+        name: $(`memberName${index}`).value, award: $(`memberAward${index}`).value,
+        awardReason: $(`memberReason${index}`).value
+      })) } : {})
     };
   }
 
@@ -243,6 +267,42 @@
     catch (error) { notice(`Не удалось отметить обновление списка: ${error.message}`, true); }
   }
 
+  function combineYoungScientists(items) {
+    const seed = LAUREATES.find((person) => person.id === GROUP_ID);
+    if (!seed) return items;
+    const old = new Map(items.filter((person) => GROUP_MEMBER_IDS.includes(person.id)).map((person) => [person.id, person]));
+    if (!old.size) return items;
+    const currentGroup = items.find((person) => person.id === GROUP_ID);
+    const group = cloneProfile(currentGroup ?? seed);
+    group.members = seed.members.map((member) => cloneProfile(old.get(member.id) ?? group.members?.find((item) => item.id === member.id) ?? member));
+    const first = items.findIndex((person) => GROUP_MEMBER_IDS.includes(person.id));
+    const next = items.filter((person) => person.id !== GROUP_ID && !GROUP_MEMBER_IDS.includes(person.id));
+    next.splice(first, 0, group);
+    return next;
+  }
+
+  function mergeYoungScientists() {
+    try { if (localStorage.getItem(GROUP_MIGRATION_KEY) === '1') return; }
+    catch (_) { /* Обновление списка всё равно пробуем выполнить. */ }
+    const next = combineYoungScientists(state.nominees);
+    if (next !== state.nominees) {
+      if (!saveData(next)) return;
+      const group = state.nominees.find((person) => person.id === GROUP_ID);
+      if (GROUP_MEMBER_IDS.some((id) => state.drafts[id])) {
+        state.drafts[GROUP_ID] = {
+          ...cloneProfile(group),
+          members: group.members.map((member) => cloneProfile(state.drafts[member.id] ?? member))
+        };
+        for (const id of GROUP_MEMBER_IDS) delete state.drafts[id];
+        if (GROUP_MEMBER_IDS.includes(state.selectedKey)) state.selectedKey = GROUP_ID;
+        try { writeDrafts(); }
+        catch (error) { notice(`Не удалось перенести черновики в групповое досье: ${error.message}`, true); }
+      }
+    }
+    try { localStorage.setItem(GROUP_MIGRATION_KEY, '1'); }
+    catch (error) { notice(`Не удалось отметить объединение досье: ${error.message}`, true); }
+  }
+
   function loadData() {
     let dataReadError = false;
     try {
@@ -254,7 +314,10 @@
     }
     loadDrafts();
     commitCompleteDrafts();
-    if (!dataReadError) mergeLaureates();
+    if (!dataReadError) {
+      mergeLaureates();
+      mergeYoungScientists();
+    }
     updateCounts();
   }
 
@@ -333,8 +396,10 @@
     state.presentationReady = true;
     if (!saved || saved.version !== 1 || !state.nominees.length) return;
     const validIds = new Set(state.nominees.map((person) => person.id));
-    state.revealed = new Set(Array.isArray(saved.revealedIds) ? saved.revealedIds.filter((id) => validIds.has(id)) : []);
-    const byId = state.nominees.findIndex((person) => person.id === saved.nomineeId);
+    const grouped = validIds.has(GROUP_ID);
+    const presentationId = (id) => grouped && GROUP_MEMBER_IDS.includes(id) ? GROUP_ID : id;
+    state.revealed = new Set(Array.isArray(saved.revealedIds) ? saved.revealedIds.map(presentationId).filter((id) => validIds.has(id)) : []);
+    const byId = state.nominees.findIndex((person) => person.id === presentationId(saved.nomineeId));
     if (byId >= 0) state.index = byId;
     else if (saved.nomineeId) state.index = 0;
     else state.index = Number.isInteger(saved.index) ? Math.min(Math.max(0, saved.index), state.nominees.length - 1) : 0;
@@ -384,6 +449,43 @@
     return card;
   }
 
+  function renderGroup(person) {
+    $('groupTitle').textContent = person.name;
+    $('groupAwardReason').textContent = person.awardReason;
+    const source = LAUREATES.find((item) => item.id === person.id);
+    const cards = person.members.map((member) => {
+      const card = document.createElement('article');
+      card.className = 'group-member';
+      const portrait = document.createElement('div');
+      portrait.className = 'group-member-photo';
+      const photo = photoFor(member.id, member.photo);
+      if (photo) {
+        const image = document.createElement('img');
+        image.src = photo;
+        image.alt = `Фотография: ${member.name}`;
+        portrait.append(image);
+      } else portrait.append(silhouetteCopy());
+      const copy = document.createElement('div');
+      copy.className = 'group-member-copy';
+      const name = document.createElement('h4');
+      name.textContent = member.name;
+      const award = document.createElement('span');
+      award.className = 'group-member-award';
+      award.textContent = member.award;
+      copy.append(name, award);
+      const original = source?.members?.find((item) => item.id === member.id);
+      if (original && member.awardReason !== original.awardReason) {
+        const detail = document.createElement('p');
+        detail.className = 'group-member-detail';
+        detail.textContent = member.awardReason;
+        copy.append(detail);
+      }
+      card.append(portrait, copy);
+      return card;
+    });
+    $('groupMembers').replaceChildren(...cards);
+  }
+
   function renderCeremony() {
     const person = state.nominees[state.index];
     if (!person) return showFinal();
@@ -393,6 +495,16 @@
     $('portraitSerial').textContent = `ОБЪЕКТ / ${String(state.index + 1).padStart(3, '0')}`;
     $('secretContent').hidden = revealed;
     $('revealedContent').hidden = !revealed;
+    const groupRevealed = revealed && !!person.members;
+    const groupSecret = !revealed && !!person.members;
+    $('caseLayout').hidden = groupRevealed;
+    $('groupReveal').hidden = !groupRevealed;
+    $('groupSecretSilhouettes').hidden = !groupSecret;
+    if (groupSecret && $('groupSecretSilhouettes').children.length !== person.members.length) {
+      $('groupSecretSilhouettes').replaceChildren(...person.members.map(silhouetteCopy));
+    }
+    $('secretStatusText').textContent = groupSecret ? 'ЛИЧНОСТИ УСТАНАВЛИВАЮТСЯ' : 'ЛИЧНОСТЬ УСТАНАВЛИВАЕТСЯ';
+    if (groupRevealed) renderGroup(person);
     $('ceremonyScreen').classList.toggle('showing-reveal', revealed);
     $('portraitFrame').classList.toggle('is-revealed', revealed);
     $('scanOverlay').hidden = true;
@@ -414,7 +526,7 @@
       $('portraitLabel').textContent = 'ЛИЧНОСТЬ УСТАНОВЛЕНА';
       const photo = photoFor(person.id, person.photo);
       $('portraitPhoto').hidden = !photo;
-      $('portraitSilhouette').hidden = !!photo;
+      $('portraitSilhouette').toggleAttribute('hidden', !!photo);
       if (photo) { $('portraitPhoto').src = photo; $('portraitPhoto').alt = `Фотография: ${person.name}`; }
       else { $('portraitPhoto').removeAttribute('src'); $('portraitPhoto').alt = ''; }
     } else {
@@ -426,11 +538,11 @@
       $('revealedDepartment').textContent = '';
       $('revealedAward').textContent = '';
       $('revealedAwardReason').textContent = '';
-      $('portraitLabel').textContent = 'ДАННЫЕ СКРЫТЫ';
+      $('portraitLabel').textContent = groupSecret ? 'ДАННЫЕ ТРЁХ ОБЪЕКТОВ СКРЫТЫ' : 'ДАННЫЕ СКРЫТЫ';
       $('portraitPhoto').hidden = true;
       $('portraitPhoto').removeAttribute('src');
       $('portraitPhoto').alt = '';
-      $('portraitSilhouette').hidden = false;
+      $('portraitSilhouette').toggleAttribute('hidden', groupSecret);
     }
   }
 
@@ -502,7 +614,7 @@
   function silhouetteCopy() {
     const svg = $('portraitSilhouette').cloneNode(true);
     svg.removeAttribute('id');
-    svg.hidden = false;
+    svg.removeAttribute('hidden');
     svg.setAttribute('aria-hidden', 'true');
     return svg;
   }
@@ -518,18 +630,39 @@
       card.className = 'gallery-card';
       const portrait = document.createElement('div');
       portrait.className = 'gallery-photo';
-      const photo = photoFor(person.id, person.photo);
-      if (photo) {
-        const image = document.createElement('img');
-        image.src = photo;
-        image.alt = `Фотография: ${person.name}`;
-        portrait.append(image);
-      } else portrait.append(silhouetteCopy());
+      if (person.members) {
+        card.classList.add('gallery-card-group');
+        portrait.classList.add('gallery-photo-group');
+        for (const member of person.members) {
+          const photo = photoFor(member.id, member.photo);
+          if (photo) {
+            const image = document.createElement('img');
+            image.src = photo;
+            image.alt = `Фотография: ${member.name}`;
+            portrait.append(image);
+          } else portrait.append(silhouetteCopy());
+        }
+      } else {
+        const photo = photoFor(person.id, person.photo);
+        if (photo) {
+          const image = document.createElement('img');
+          image.src = photo;
+          image.alt = `Фотография: ${person.name}`;
+          portrait.append(image);
+        } else portrait.append(silhouetteCopy());
+      }
       const name = document.createElement('strong');
       name.textContent = person.name;
       const award = document.createElement('small');
       award.textContent = person.award;
-      card.append(portrait, name, award);
+      card.append(portrait, name);
+      if (person.members) {
+        const members = document.createElement('span');
+        members.className = 'gallery-member-names';
+        members.textContent = person.members.map((member) => member.name.split(' ')[0]).join(' · ');
+        card.append(members);
+      }
+      card.append(award);
       return card;
     });
     $('finalGallery').replaceChildren(...cards);
@@ -660,14 +793,25 @@
     state.editorVersion++;
     state.selectedId = person?.id ?? null;
     state.selectedKey = key;
-    state.editorBaseline = person ? { ...person, traits: [...person.traits] } : null;
+    state.editorBaseline = person ? cloneProfile(person) : null;
     state.draftPhoto = draft ? draft.photo : person?.photo ?? null;
+    state.draftMembers = (draft?.members ?? person?.members)?.map(cloneProfile) ?? null;
     $('nomineeForm').reset();
-    $('formTitle').textContent = person ? 'РЕДАКТИРОВАТЬ ДОСЬЕ' : 'НОВОЕ ДОСЬЕ';
+    $('formTitle').textContent = person?.members ? 'РЕДАКТИРОВАТЬ ГРУППОВОЕ ДОСЬЕ' : person ? 'РЕДАКТИРОВАТЬ ДОСЬЕ' : 'НОВОЕ ДОСЬЕ';
     $('formIndex').textContent = person ? `ОБЪЕКТ / ${String(state.nominees.indexOf(person) + 1).padStart(3, '0')}` : 'НОВЫЙ ОБЪЕКТ';
+    for (const [field, single, group] of [
+      ['fieldName', 'ФИО ', 'НАЗВАНИЕ ДОСЬЕ '],
+      ['fieldPosition', 'ДОЛЖНОСТЬ ', 'ПОДЗАГОЛОВОК '],
+      ['fieldDepartment', 'ПОДРАЗДЕЛЕНИЕ ', 'ОРГАНИЗАЦИЯ '],
+      ['fieldAward', 'НАГРАДА ', 'ОБЩАЯ НАГРАДА '],
+      ['fieldAwardReason', 'ЗА ЧТО НАГРАЖДАЕТСЯ ', 'ЗА ЧТО НАГРАЖДАЮТСЯ ']
+    ]) $(field).closest('label').querySelector('span').firstChild.textContent = state.draftMembers ? group : single;
     for (const [fieldName, field] of [['name', 'fieldName'], ['position', 'fieldPosition'], ['department', 'fieldDepartment'], ['power', 'fieldPower'], ['award', 'fieldAward'], ['awardReason', 'fieldAwardReason']]) $(field).value = draft ? draft[fieldName] : person?.[fieldName] ?? '';
     for (let i = 0; i < 3; i++) $(`fieldTrait${i + 1}`).value = draft ? draft.traits[i] : person?.traits[i] ?? '';
+    $('singlePhotoEditor').hidden = !!state.draftMembers;
+    $('groupEditor').hidden = !state.draftMembers;
     updatePhotoPreview();
+    renderMemberEditor();
     renderList();
     setSaveStatus(draft ? (isCompleteDraft(draft) ? 'СОХРАНЯЕТСЯ...' : 'ЧЕРНОВИК СОХРАНЁН') : 'АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО');
     try { writeDrafts(); }
@@ -690,6 +834,85 @@
     $('removePhotoButton').hidden = !photo;
   }
 
+  function renderMemberEditor() {
+    const container = $('groupMemberFields');
+    if (!state.draftMembers) return container.replaceChildren();
+    const rows = state.draftMembers.map((member, index) => {
+      const row = document.createElement('div');
+      row.className = 'group-editor-member';
+      const picture = document.createElement('div');
+      picture.className = 'photo-preview';
+      const photo = photoFor(member.id, member.photo);
+      if (photo) {
+        const image = document.createElement('img');
+        image.src = photo;
+        image.alt = `Фотография: ${member.name}`;
+        picture.append(image);
+      } else picture.textContent = '◎';
+      const details = document.createElement('div');
+      details.className = 'group-editor-fields';
+      for (const [title, id, value, limit, multiline] of [
+        ['ФИО', `memberName${index}`, member.name, 120, false],
+        ['НАГРАДА', `memberAward${index}`, member.award, 120, false],
+        ['ЗА ЧТО НАГРАЖДАЕТСЯ', `memberReason${index}`, member.awardReason, MAX_REASON_CHARS, true]
+      ]) {
+        const label = document.createElement('label');
+        label.className = 'field';
+        const caption = document.createElement('span');
+        caption.textContent = title;
+        const input = document.createElement(multiline ? 'textarea' : 'input');
+        input.id = id;
+        input.maxLength = limit;
+        input.required = true;
+        input.value = value;
+        if (multiline) input.rows = 2;
+        label.append(caption, input);
+        details.append(label);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'group-editor-actions';
+      const file = document.createElement('input');
+      file.type = 'file';
+      file.accept = 'image/jpeg,image/png,image/webp';
+      file.hidden = true;
+      file.id = `memberPhoto${index}`;
+      const upload = document.createElement('label');
+      upload.className = 'button button-small upload-label';
+      upload.htmlFor = file.id;
+      upload.textContent = '↑ ЗАМЕНИТЬ ФОТО';
+      file.addEventListener('change', async () => {
+        const chosen = file.files[0];
+        file.value = '';
+        if (!chosen) return;
+        const version = state.editorVersion;
+        try {
+          const image = await resizePhoto(chosen);
+          if (version !== state.editorVersion) return;
+          state.draftMembers = captureDraft().members;
+          state.draftMembers[index].photo = image;
+          renderMemberEditor();
+          saveDraft();
+        } catch (error) { notice(error.message, true); }
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'text-button';
+      remove.textContent = 'УДАЛИТЬ ФОТО';
+      remove.hidden = !photo;
+      remove.addEventListener('click', () => {
+        state.draftMembers = captureDraft().members;
+        state.draftMembers[index].photo = '';
+        renderMemberEditor();
+        saveDraft();
+      });
+      actions.append(upload, file, remove);
+      details.append(actions);
+      row.append(picture, details);
+      return row;
+    });
+    container.replaceChildren(...rows);
+  }
+
   function saveForm(event) {
     event.preventDefault();
     const form = $('nomineeForm');
@@ -697,17 +920,7 @@
     try {
       const previous = state.nominees.find((item) => item.id === state.selectedId);
       const key = state.selectedId ?? NEW_DRAFT_KEY;
-      const person = {
-        id: previous?.id ?? state.drafts[NEW_DRAFT_KEY]?.id ?? makeId(),
-        name: validText($('fieldName').value, 120, 'ФИО'),
-        position: validText($('fieldPosition').value, 120, 'Должность'),
-        department: validText($('fieldDepartment').value, 120, 'Подразделение'),
-        power: validText($('fieldPower').value, 300, 'Суперсила'),
-        traits: [1, 2, 3].map((number) => validText($(`fieldTrait${number}`).value, 180, `Характеристика ${number}`)),
-        award: validText($('fieldAward').value, 120, 'Награда'),
-        awardReason: validText($('fieldAwardReason').value, MAX_REASON_CHARS, 'Причина награждения'),
-        photo: state.draftPhoto
-      };
+      const person = validateNominees([captureDraft()])[0];
       const next = [...state.nominees];
       if (previous) next[next.indexOf(previous)] = person;
       else {
@@ -820,7 +1033,8 @@
   }
 
   async function checkImportedPhotos(items) {
-    await Promise.all(items.filter((item) => item.photo).map((item) => new Promise((resolve, reject) => {
+    const all = items.flatMap((item) => [item, ...(item.members ?? [])]);
+    await Promise.all(all.filter((item) => item.photo).map((item) => new Promise((resolve, reject) => {
       const image = new Image();
       image.onload = () => image.naturalWidth && image.naturalHeight ? resolve() : reject(new Error(`Не удалось прочитать фотографию: ${item.name}.`));
       image.onerror = () => reject(new Error(`Повреждена фотография: ${item.name}.`));
@@ -836,7 +1050,7 @@
       if (file.size > 8 * 1024 * 1024) throw new Error('JSON-файл слишком велик (более 8 МБ).');
       const parsed = JSON.parse(await file.text());
       if (!parsed || typeof parsed !== 'object' || parsed.version !== 1) throw new Error('Неверная версия файла. Ожидается экспорт приложения (version: 1).');
-      const imported = validateNominees(parsed.nominees);
+      const imported = combineYoungScientists(validateNominees(parsed.nominees));
       await checkImportedPhotos(imported);
       if (!window.confirm(`Заменить текущие ${state.nominees.length} досье на ${imported.length} из файла?`)) return;
       if (saveData(imported, `Импортировано досье: ${imported.length}.`)) {
@@ -852,7 +1066,7 @@
 
   function restoreLaureates() {
     if (!window.confirm('Заменить текущие досье списком лауреатов из документа? Сначала экспортируйте данные, если хотите сохранить свои изменения.')) return;
-    const originals = LAUREATES.map((person) => ({ ...person, traits: [...person.traits] }));
+    const originals = LAUREATES.map(cloneProfile);
     if (saveData(originals, 'Список лауреатов восстановлен.')) {
       state.revealed.clear();
       state.index = 0;

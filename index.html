@@ -49,7 +49,7 @@
           <div><span class="overline">СЕКРЕТНЫЙ АРХИВ / СЕРИЯ 01</span><h2 id="caseHeading">НАУЧНОЕ ДОСЬЕ <span id="caseNumber">№ 001</span></h2></div>
           <div class="case-count"><span id="casePosition">01 / 03</span><small>ОБЪЕКТОВ ИССЛЕДОВАНИЯ</small></div>
         </div>
-        <div class="case-layout">
+        <div id="caseLayout" class="case-layout">
           <div class="case-main">
             <div id="secretContent" class="secret-content">
               <div class="section-tag"><span class="tag-line"></span> ОБЪЕКТ ЗАСЕКРЕЧЕН</div>
@@ -57,7 +57,7 @@
               <h3 id="secretPower" class="power-text"></h3>
               <div class="traits-heading"><span>РЕЗУЛЬТАТЫ НАБЛЮДЕНИЙ</span><span>01 — 03</span></div>
               <div id="traitCards" class="trait-cards"></div>
-              <div class="secret-status"><span class="status-spinner" aria-hidden="true"></span><span>ЛИЧНОСТЬ УСТАНАВЛИВАЕТСЯ<span class="typing-dots" aria-hidden="true">...</span></span></div>
+              <div class="secret-status"><span class="status-spinner" aria-hidden="true"></span><span><span id="secretStatusText">ЛИЧНОСТЬ УСТАНАВЛИВАЕТСЯ</span><span class="typing-dots" aria-hidden="true">...</span></span></div>
             </div>
             <div id="revealedContent" class="revealed-content" hidden>
               <div class="section-tag gold-tag"><span class="tag-line"></span> ЛИЧНОСТЬ УСТАНОВЛЕНА</div>
@@ -79,6 +79,7 @@
               <div class="portrait-window">
                 <div class="portrait-noise" aria-hidden="true"></div>
                 <svg id="portraitSilhouette" class="portrait-silhouette" viewBox="0 0 400 500" aria-label="Стилизованный силуэт" role="img"><defs><linearGradient id="silhouetteFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#385c72"/><stop offset="1" stop-color="#152c3d"/></linearGradient></defs><circle cx="200" cy="190" r="91" fill="url(#silhouetteFill)"/><path d="M38 500c9-110 77-171 162-171s153 61 162 171" fill="url(#silhouetteFill)"/><path d="M109 167c13-61 58-99 91-99s78 38 91 99" fill="none" stroke="#81c5cc" stroke-opacity=".55" stroke-width="3"/><path d="M80 480c20-72 55-105 120-105s100 33 120 105" fill="none" stroke="#81c5cc" stroke-opacity=".3" stroke-width="2"/></svg>
+                <div id="groupSecretSilhouettes" class="group-secret-silhouettes" hidden></div>
                 <img id="portraitPhoto" class="portrait-photo" alt="" hidden>
                 <div class="portrait-scan" aria-hidden="true"></div>
                 <div class="portrait-corner corner-tl"></div><div class="portrait-corner corner-tr"></div><div class="portrait-corner corner-bl"></div><div class="portrait-corner corner-br"></div>
@@ -87,6 +88,11 @@
             </div>
             <p class="portrait-footnote">ИНСТИТУТ МИКРОБИОЛОГИИ <span>—</span> ЛЮДИ НАУКИ</p>
           </div>
+        </div>
+        <div id="groupReveal" class="group-reveal" hidden>
+          <div class="group-reveal-heading"><span class="section-tag gold-tag"><span class="tag-line"></span> ЛИЧНОСТИ УСТАНОВЛЕНЫ</span><h3 id="groupTitle"></h3><p>Три человека. Одно общее дело — делать науку ближе.</p></div>
+          <div id="groupMembers" class="group-members"></div>
+          <div class="group-reason"><span class="award-reason-label">ЗА ЧТО НАГРАЖДАЮТСЯ</span><p id="groupAwardReason"></p></div>
         </div>
         <div id="scanOverlay" class="scan-overlay" role="status" aria-live="polite" hidden>
           <div class="scan-overlay-inner"><span class="scan-symbol" aria-hidden="true">◎</span><p id="scanMessage">ЗАПУСК ПРОЦЕДУРЫ ИДЕНТИФИКАЦИИ</p><div class="scan-progress"><span id="scanProgress"></span></div><small id="scanPercent">00%</small></div>
@@ -117,7 +123,8 @@
           <aside class="editor-sidebar"><div class="sidebar-heading"><span>СОТРУДНИКИ <b id="editorCount">03</b></span><button id="newNomineeButton" class="small-add" type="button">+ ДОБАВИТЬ</button></div><div id="nomineeList" class="nominee-list"></div><div class="editor-data-actions"><button id="exportButton" class="button button-small" type="button">↓ ЭКСПОРТ JSON</button><button id="importButton" class="button button-small" type="button">↑ ИМПОРТ JSON</button><input id="importFile" type="file" accept=".json,application/json" hidden><button id="resetButton" class="button button-small button-danger" type="button">ВОССТАНОВИТЬ СПИСОК ЛАУРЕАТОВ</button></div></aside>
           <div class="editor-form-panel"><div class="form-heading"><div><span class="overline">ЛИЧНАЯ КАРТОЧКА</span><h3 id="formTitle">НОВОЕ ДОСЬЕ</h3><span id="saveStatus" class="save-status" role="status" aria-live="polite">АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</span></div><span id="formIndex" class="form-index">НОВЫЙ ОБЪЕКТ</span></div><form id="nomineeForm" novalidate>
             <div class="form-grid"><label class="field field-full"><span>ФИО <b>*</b></span><input id="fieldName" name="name" maxlength="120" required placeholder="Фамилия Имя Отчество"></label><label class="field"><span>ДОЛЖНОСТЬ <b>*</b></span><input id="fieldPosition" name="position" maxlength="120" required placeholder="Например, научный сотрудник"></label><label class="field"><span>ПОДРАЗДЕЛЕНИЕ <b>*</b></span><input id="fieldDepartment" name="department" maxlength="120" required placeholder="Например, научная лаборатория"></label><label class="field field-full"><span>СЕКРЕТНАЯ СУПЕРСИЛА <b>*</b></span><textarea id="fieldPower" name="power" maxlength="300" rows="3" required placeholder="Что делает этого человека особенным?"></textarea></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 01 <b>*</b></span><input id="fieldTrait1" maxlength="180" required placeholder="Профессионализм — подтверждён практикой"></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 02 <b>*</b></span><input id="fieldTrait2" maxlength="180" required></label><label class="field field-full"><span>ХАРАКТЕРИСТИКА 03 <b>*</b></span><input id="fieldTrait3" maxlength="180" required></label><label class="field field-full"><span>НАГРАДА <b>*</b></span><input id="fieldAward" maxlength="120" list="awardOptions" required placeholder="Почётная грамота"><datalist id="awardOptions"><option value="Почётная грамота"></option><option value="Благодарность директора"></option><option value="Благодарность Совета молодых учёных"></option><option value="Грамота Отделения биологических наук НАН Беларуси"></option></datalist></label><label class="field field-full"><span>ЗА ЧТО НАГРАЖДАЕТСЯ <b>*</b></span><textarea id="fieldAwardReason" maxlength="700" rows="3" required placeholder="За выдающиеся достижения, помощь коллегам и вклад в работу института"></textarea></label></div>
-            <div class="photo-upload"><div id="editorPhotoPreview" class="photo-preview"><span>◎</span></div><div><label for="photoFile" class="button button-small upload-label">↑ ЗАГРУЗИТЬ ФОТОГРАФИЮ</label><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><p>JPG, PNG или WebP. Изображение будет уменьшено для надёжного сохранения.</p><button id="removePhotoButton" class="text-button" type="button">УДАЛИТЬ ФОТОГРАФИЮ</button></div></div>
+            <div id="singlePhotoEditor" class="photo-upload"><div id="editorPhotoPreview" class="photo-preview"><span>◎</span></div><div><label for="photoFile" class="button button-small upload-label">↑ ЗАГРУЗИТЬ ФОТОГРАФИЮ</label><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" hidden><p>JPG, PNG или WebP. Изображение будет уменьшено для надёжного сохранения.</p><button id="removePhotoButton" class="text-button" type="button">УДАЛИТЬ ФОТОГРАФИЮ</button></div></div>
+            <div id="groupEditor" class="group-editor" hidden><h4>УЧАСТНИЦЫ ГРУППОВОГО ДОСЬЕ</h4><div id="groupMemberFields"></div></div>
             <div class="form-actions"><button id="saveNomineeButton" class="button button-primary" type="submit">СОХРАНИТЬ ДОСЬЕ</button><button id="cancelEditButton" class="button button-ghost" type="button">ОТМЕНА</button></div>
           </form></div>
         </div>
