@@ -21,9 +21,16 @@
     { id: 'demo-sergey', name: 'Сергей Петрович Ковалёв', department: 'Инженерно-техническая служба', position: 'Инженер', power: 'Умение возвращать к жизни технику, которую остальные уже мысленно списали.', traits: ['Устойчивость к техническим неожиданностям: высокая.', 'Изобретательность: практически неисчерпаемая.', 'Репутация среди оборудования: легендарная.'], award: 'Благодарность', awardReason: 'За мастерство, изобретательность и неизменную помощь коллегам.', photo: null },
     { id: 'demo-elena', name: 'Елена Викторовна Смирнова', department: 'Административный отдел', position: 'Специалист', power: 'Умение одновременно решать десять задач и сохранять абсолютное спокойствие.', traits: ['Многозадачность: феноменальная.', 'Организованность: эталонная.', 'Соблюдение сроков: подтверждено многолетними наблюдениями.'], award: 'Почётная грамота', awardReason: 'За безупречную организацию работы и заботу о каждом сотруднике.', photo: null }
   ];
+  const DEFAULT_PHOTOS = new Map((Array.isArray(window.LAUREATES) ? window.LAUREATES : [])
+    .filter((person) => typeof person.photo === 'string')
+    .map((person) => [person.id, person.photo]));
   const LAUREATES = (Array.isArray(window.LAUREATES) ? window.LAUREATES : []).map((person) => ({
     ...person, traits: [...person.traits], photo: null
   }));
+
+  function photoFor(id, photo) {
+    return photo === null ? DEFAULT_PHOTOS.get(id) ?? null : photo;
+  }
 
   const state = {
     nominees: LAUREATES.map((person) => ({ ...person, traits: [...person.traits] })),
@@ -60,8 +67,8 @@
       if (ids.has(id)) throw new Error(`Досье № ${index + 1}: повторяется идентификатор.`);
       ids.add(id);
       if (!Array.isArray(item.traits) || item.traits.length !== 3) throw new Error(`Досье № ${index + 1}: нужны ровно три характеристики.`);
-      const photo = item.photo == null || item.photo === '' ? null : item.photo;
-      if (photo !== null && (typeof photo !== 'string' || photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo))) {
+      const photo = item.photo == null ? null : item.photo;
+      if (photo !== null && photo !== '' && (typeof photo !== 'string' || photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo))) {
         throw new Error(`Досье № ${index + 1}: фотография имеет неверный формат или слишком велика.`);
       }
       return {
@@ -96,7 +103,7 @@
     if (!Array.isArray(value.traits) || value.traits.length !== 3 || value.traits.some((trait) => typeof trait !== 'string' || trait.length > 180)) throw new Error('Повреждены характеристики черновика.');
     draft.traits = [...value.traits];
     draft.photo = value.photo == null ? null : value.photo;
-    if (draft.photo !== null && (typeof draft.photo !== 'string' || draft.photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(draft.photo))) throw new Error('Повреждена фотография черновика.');
+    if (draft.photo !== null && draft.photo !== '' && (typeof draft.photo !== 'string' || draft.photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(draft.photo))) throw new Error('Повреждена фотография черновика.');
     return draft;
   }
 
@@ -405,9 +412,10 @@
       $('revealedAwardReason').classList.toggle('is-extensive', person.awardReason.length > 360);
       $('ceremonyScreen').classList.toggle('detailed-award', person.awardReason.length > 260);
       $('portraitLabel').textContent = 'ЛИЧНОСТЬ УСТАНОВЛЕНА';
-      $('portraitPhoto').hidden = !person.photo;
-      $('portraitSilhouette').hidden = !!person.photo;
-      if (person.photo) { $('portraitPhoto').src = person.photo; $('portraitPhoto').alt = `Фотография: ${person.name}`; }
+      const photo = photoFor(person.id, person.photo);
+      $('portraitPhoto').hidden = !photo;
+      $('portraitSilhouette').hidden = !!photo;
+      if (photo) { $('portraitPhoto').src = photo; $('portraitPhoto').alt = `Фотография: ${person.name}`; }
       else { $('portraitPhoto').removeAttribute('src'); $('portraitPhoto').alt = ''; }
     } else {
       $('ceremonyScreen').classList.remove('detailed-award');
@@ -510,9 +518,10 @@
       card.className = 'gallery-card';
       const portrait = document.createElement('div');
       portrait.className = 'gallery-photo';
-      if (person.photo) {
+      const photo = photoFor(person.id, person.photo);
+      if (photo) {
         const image = document.createElement('img');
-        image.src = person.photo;
+        image.src = photo;
         image.alt = `Фотография: ${person.name}`;
         portrait.append(image);
       } else portrait.append(silhouetteCopy());
@@ -667,9 +676,10 @@
 
   function updatePhotoPreview() {
     const preview = $('editorPhotoPreview');
-    if (state.draftPhoto) {
+    const photo = photoFor(state.selectedId, state.draftPhoto);
+    if (photo) {
       const image = document.createElement('img');
-      image.src = state.draftPhoto;
+      image.src = photo;
       image.alt = 'Предпросмотр фотографии';
       preview.replaceChildren(image);
     } else {
@@ -677,7 +687,7 @@
       symbol.textContent = '◎';
       preview.replaceChildren(symbol);
     }
-    $('removePhotoButton').hidden = !state.draftPhoto;
+    $('removePhotoButton').hidden = !photo;
   }
 
   function saveForm(event) {
@@ -923,7 +933,7 @@
     $('nomineeForm').addEventListener('input', saveDraft);
     $('cancelEditButton').addEventListener('click', cancelEdit);
     $('photoFile').addEventListener('change', onPhotoSelected);
-    $('removePhotoButton').addEventListener('click', () => { state.draftPhoto = null; updatePhotoPreview(); saveDraft(); });
+    $('removePhotoButton').addEventListener('click', () => { state.draftPhoto = ''; updatePhotoPreview(); saveDraft(); });
     $('exportButton').addEventListener('click', exportData);
     $('importButton').addEventListener('click', () => $('importFile').click());
     $('importFile').addEventListener('change', importData);

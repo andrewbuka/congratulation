@@ -2,6 +2,7 @@
 window.LAUREATES = [
   {
     "id": "gramota-naydenko",
+    "photo": "assets/НАЙДЕНКО И.А..jpg",
     "name": "Инна Александровна Найденко",
     "position": "Ведущий научный сотрудник",
     "department": "Лаборатория молочнокислых и бифидобактерий",
@@ -30,6 +31,7 @@ window.LAUREATES = [
   },
   {
     "id": "gramota-orlovskaya",
+    "photo": "assets/ОРЛОВСКАЯ П.И..jpg",
     "name": "Полина Ивановна Орловская",
     "position": "Научный сотрудник",
     "department": "Лаборатория «Коллекция микроорганизмов»",
@@ -44,6 +46,7 @@ window.LAUREATES = [
   },
   {
     "id": "gramota-prigodskaya",
+    "photo": "assets/ПРИГОДСКАЯ В.И..jpg",
     "name": "Вероника Ивановна Пригодская",
     "position": "Младший научный сотрудник",
     "department": "Лаборатория взаимоотношений микроорганизмов почвы и высших растений",
@@ -58,6 +61,7 @@ window.LAUREATES = [
   },
   {
     "id": "gramota-sikolenko",
+    "photo": "assets/СИКОЛЕНКО М.А..jpg",
     "name": "Максим Александрович Сиколенко",
     "position": "Младший научный сотрудник",
     "department": "Лаборатория «Центр аналитических и генно-инженерных исследований»",
@@ -72,6 +76,7 @@ window.LAUREATES = [
   },
   {
     "id": "gramota-sidorenko",
+    "photo": "assets/СИДОРЕНКО А.В..jpg",
     "name": "Анастасия Вячеславовна Сидоренко",
     "position": "Заместитель директора по научной работе",
     "department": "Институт микробиологии НАН Беларуси",
@@ -86,6 +91,7 @@ window.LAUREATES = [
   },
   {
     "id": "gramota-morozova",
+    "photo": "assets/МОРОЗОВА А.Н..jpg",
     "name": "Антонина Николаевна Морозова",
     "position": "Заведующая лабораторией",
     "department": "Лаборатория молочнокислых и бифидобактерий",
@@ -100,6 +106,7 @@ window.LAUREATES = [
   },
   {
     "id": "director-matryonkin",
+    "photo": "assets/МАТРЕНКИН Д.С..jpg",
     "name": "Дмитрий Сергеевич Матрёнкин",
     "position": "Инженер",
     "department": "Отдел «Научно-производственный центр биотехнологий»",
@@ -114,6 +121,7 @@ window.LAUREATES = [
   },
   {
     "id": "director-shlyakhotko",
+    "photo": "assets/ШЛЯХОТКО Е.А..jpg",
     "name": "Екатерина Александровна Шляхотко",
     "position": "Старший научный сотрудник",
     "department": "Лаборатория ферментов",
@@ -142,6 +150,7 @@ window.LAUREATES = [
   },
   {
     "id": "director-rusevich",
+    "photo": "assets/РУСЕВИЧ А.С..jpg",
     "name": "Анна Сергеевна Русевич",
     "position": "Младший научный сотрудник",
     "department": "Лаборатория природоохранных биотехнологий",
@@ -156,6 +165,7 @@ window.LAUREATES = [
   },
   {
     "id": "director-semashko",
+    "photo": "assets/СЕМАШКО Т.В..jpg",
     "name": "Татьяна Владимировна Семашко",
     "position": "Заведующая лабораторией",
     "department": "Лаборатория биотехнологии микромицетов",
@@ -170,6 +180,7 @@ window.LAUREATES = [
   },
   {
     "id": "director-akulovich",
+    "photo": "assets/АКУЛОВИЧ С.Э..jpg",
     "name": "Станислав Эдуардович Акулович",
     "position": "Главный инженер",
     "department": "Отдел инженерно-хозяйственного обеспечения",
@@ -184,6 +195,7 @@ window.LAUREATES = [
   },
   {
     "id": "young-scientists-prigodskaya",
+    "photo": "assets/ПРИГОДСКАЯ В.И..jpg",
     "name": "Вероника Ивановна Пригодская",
     "position": "Младший научный сотрудник",
     "department": "Лаборатория взаимоотношений микроорганизмов почвы и высших растений",
@@ -198,6 +210,7 @@ window.LAUREATES = [
   },
   {
     "id": "young-scientists-leonovich",
+    "photo": "assets/Леонович С.И..jpg",
     "name": "Светлана Игоревна Леонович",
     "position": "Научный сотрудник",
     "department": "Лаборатория «Коллекция микроорганизмов»",
@@ -212,6 +225,7 @@ window.LAUREATES = [
   },
   {
     "id": "young-scientists-kantor",
+    "photo": "assets/КАНТОР К.В..jpg",
     "name": "Карина Викторовна Кантор",
     "position": "Научный сотрудник",
     "department": "Лаборатория «Коллекция микроорганизмов»",
@@ -226,6 +240,7 @@ window.LAUREATES = [
   },
   {
     "id": "biology-shchetko",
+    "photo": "assets/ЩЕТКО В.А..jpg",
     "name": "Виталий Анатольевич Щетко",
     "position": "Начальник отдела",
     "department": "Отдел «Научно-производственный центр биотехнологий»",
@@ -240,6 +255,7 @@ window.LAUREATES = [
   },
   {
     "id": "biology-gulyaeva",
+    "photo": "assets/ГУЛЯЕВА Д.Е..jpg",
     "name": "Дарья Евгеньевна Гуляева",
     "position": "Младший научный сотрудник",
     "department": "Лаборатория «Коллекция микроорганизмов»",
@@ -254,6 +270,7 @@ window.LAUREATES = [
   },
   {
     "id": "biology-shavela",
+    "photo": "assets/ШАВЕЛА Ю.В..jpg",
     "name": "Юлия Владимировна Шавела",
     "position": "Научный сотрудник",
     "department": "Лаборатория природоохранных биотехнологий",
@@ -268,6 +285,7 @@ window.LAUREATES = [
   },
   {
     "id": "biology-narkevich",
+    "photo": "assets/НАРКЕВИЧ Д.А..jpg",
     "name": "Дарья Алексеевна Наркевич",
     "position": "Научный сотрудник",
     "department": "Лаборатория природоохранных биотехнологий",
