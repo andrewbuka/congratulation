@@ -10,6 +10,8 @@
 @media(max-height:950px) and (min-width:761px){.masthead{height:68px}.ceremony-screen{min-height:calc(100vh - 68px);padding:16px 0 8px}.case-topline{padding-bottom:10px}.case-topline h2{margin-top:6px}.case-layout{padding-top:13px}.case-label{margin:16px 0 8px}.power-text{font-size:clamp(26px,2.8vw,42px);margin-bottom:24px}.trait-cards{padding-top:10px}.trait-card{min-height:82px;padding:10px}.secret-status{margin-top:16px}.portrait-frame{max-width:330px;padding:10px}.portrait-footnote{margin:7px 0}.ceremony-controls{padding:5px}.control-button,.control-icon{min-height:35px}.keyboard-hint{margin:6px 0 0}.revealed-content .case-label{margin-top:17px}.revealed-name{font-size:clamp(37px,4vw,63px)}.reveal-rule{margin:17px 0}.award-plaque{margin-top:22px;padding:13px 17px}.revealed-note{margin-top:12px}}
 @media(max-width:760px){.app-shell{padding:0 18px}.masthead{height:70px}.masthead-code{display:none}.start-screen{display:block;padding:48px 0}.start-copy h1{font-size:clamp(55px,12vw,100px)}.start-visual{min-height:430px;margin-top:25px}.case-layout{display:flex;flex-direction:column-reverse;padding-top:22px;gap:28px}.portrait-column{width:min(100%,360px);margin:auto}.portrait-rings{inset:-10px}.portrait-window{aspect-ratio:4/3}.portrait-silhouette{height:150%;transform:translateY(12%)}.portrait-footnote{display:none}.case-main{justify-content:start}.case-label{margin-top:22px}.power-text{font-size:clamp(27px,6vw,46px);margin-bottom:28px}.case-topline h2{font-size:19px}.case-count small{display:none}.trait-cards{grid-template-columns:1fr}.trait-card,.trait-card:last-child{grid-column:auto;min-height:68px}.trait-card{flex-direction:row;align-items:center}.secret-status{margin:22px 0}.ceremony-controls{position:sticky;bottom:8px;flex-wrap:wrap;justify-content:center}.keyboard-hint{display:none}.revealed-name{font-size:clamp(39px,8vw,70px)}.final-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.editor-layout{grid-template-columns:1fr}.editor-head{display:block}.editor-head .button{margin-top:8px}}@media(max-width:500px){.brand-copy strong{font-size:9px}.brand-copy small{font-size:8px}.start-meta{flex-direction:column;gap:8px}.start-visual{min-height:350px}.start-copy h1{font-size:51px}.eyebrow{font-size:9px}.final-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.final-actions .button{width:100%}.form-grid{grid-template-columns:1fr}.field{grid-column:1/-1}.photo-upload{align-items:start}.control-button{padding:0 9px}.control-primary{min-width:130px;padding:0 10px}.control-icon{width:34px}.case-count{font-size:10px}}@media(hover:none){.ceremony-controls{opacity:1;transform:none;pointer-events:auto}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}#ambientCanvas{display:none}}
 .save-status{display:block;margin-top:10px;color:var(--teal);font-size:9px;font-weight:700;letter-spacing:.16em}.save-status.save-error{color:#ef9c9c}
+.list-identity{display:flex;flex-direction:column;gap:4px;min-width:0}
+.list-award{color:var(--gold);font-size:10px;line-height:1.25;overflow-wrap:anywhere}
 
 /* На раскрытой карточке главное — причина награждения. */
 .revealed-content .case-label{margin:clamp(18px,3vh,34px) 0 9px}
@@ -23,6 +25,12 @@
 .award-reason{color:#f8e7bf;font-size:clamp(34px,4.1vw,70px);font-weight:700;line-height:1.1;letter-spacing:-.045em;text-wrap:balance;overflow-wrap:anywhere;margin:15px 0 0;text-shadow:0 8px 32px #b4803426}
 .award-reason.is-long{font-size:clamp(29px,3.3vw,53px)}
 .award-reason.is-very-long{font-size:clamp(24px,2.7vw,42px)}
+.award-reason.is-detailed{font-size:clamp(27px,2.75vw,44px)}
+.award-reason.is-extensive{font-size:clamp(22px,2.3vw,35px)}
+@media(min-width:761px){
+  .ceremony-screen.showing-reveal.detailed-award .case-layout{grid-template-columns:minmax(0,1fr) minmax(250px,.38fr);gap:clamp(20px,3vw,48px)}
+  .ceremony-screen.showing-reveal.detailed-award .portrait-frame{max-width:320px}
+}
 @media(max-height:950px) and (min-width:761px){
   .revealed-content .case-label{margin-top:12px}
   .revealed-name{font-size:clamp(35px,3.4vw,57px)}
@@ -32,6 +40,27 @@
   .award-reason{font-size:clamp(30px,3.4vw,52px)}
   .award-reason.is-long{font-size:clamp(26px,2.9vw,43px)}
   .award-reason.is-very-long{font-size:clamp(22px,2.35vw,35px)}
+  .award-reason.is-detailed{font-size:clamp(22px,2.15vw,32px)}
+  .award-reason.is-extensive{font-size:clamp(20px,1.9vw,28px)}
+}
+@media(max-height:780px) and (min-width:761px){
+  .ceremony-screen.showing-reveal{padding-top:8px}
+  .ceremony-screen.showing-reveal .case-layout{padding-top:4px}
+  .ceremony-screen.showing-reveal .revealed-content .case-label{margin:6px 0 4px}
+  .ceremony-screen.showing-reveal .revealed-name{font-size:clamp(34px,3vw,45px)}
+  .ceremony-screen.showing-reveal .reveal-rule{margin:6px 0}
+  .ceremony-screen.showing-reveal .revealed-position{font-size:clamp(16px,1.4vw,22px);margin-bottom:3px}
+  .ceremony-screen.showing-reveal .revealed-department{font-size:14px}
+  .ceremony-screen.showing-reveal .award-plaque{margin-top:9px;padding:8px 13px}
+  .ceremony-screen.showing-reveal .award-icon{font-size:30px}
+  .ceremony-screen.showing-reveal .award-reason-block{margin-top:12px;padding-bottom:12px}
+  .ceremony-screen.showing-reveal .award-reason{margin-top:8px;font-size:clamp(28px,2.5vw,34px)}
+  .ceremony-screen.showing-reveal .award-reason.is-long{font-size:clamp(27px,2.35vw,32px)}
+  .ceremony-screen.showing-reveal .award-reason.is-very-long{font-size:clamp(25px,2.15vw,30px)}
+  .ceremony-screen.showing-reveal .award-reason.is-detailed{font-size:clamp(23px,1.95vw,27px)}
+  .ceremony-screen.showing-reveal .award-reason.is-extensive{font-size:clamp(21px,1.7vw,24px)}
+  .ceremony-screen.showing-reveal .portrait-frame{max-width:280px}
+  .ceremony-screen.showing-reveal .portrait-footnote,.ceremony-screen.showing-reveal .keyboard-hint{display:none}
 }
 @media(max-width:760px){
   .case-topline{gap:12px;align-items:start}
@@ -43,5 +72,7 @@
   .award-reason{font-size:clamp(35px,7vw,52px)}
   .award-reason.is-long{font-size:clamp(29px,5.5vw,44px)}
   .award-reason.is-very-long{font-size:clamp(25px,4.8vw,36px)}
+  .award-reason.is-detailed{font-size:clamp(23px,4.4vw,32px)}
+  .award-reason.is-extensive{font-size:clamp(21px,4vw,29px)}
   .ceremony-screen.showing-reveal .ceremony-controls{position:static;margin-top:18px}
 }
