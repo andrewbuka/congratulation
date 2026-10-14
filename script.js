@@ -76,7 +76,7 @@
       const id = typeof item.id === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(item.id) ? item.id : makeId();
       if (ids.has(id)) throw new Error(`Досье № ${index + 1}: повторяется идентификатор.`);
       ids.add(id);
-      if (!Array.isArray(item.traits) || item.traits.length !== 3) throw new Error(`Досье № ${index + 1}: нужны ровно три характеристики.`);
+      if (!Array.isArray(item.traits) || item.traits.length !== 3) throw new Error(`Досье № ${index + 1}: нужны ровно три качества.`);
       const photo = item.photo == null ? null : item.photo;
       if (photo !== null && photo !== '' && (typeof photo !== 'string' || photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo))) {
         throw new Error(`Досье № ${index + 1}: фотография имеет неверный формат или слишком велика.`);
@@ -90,7 +90,7 @@
         position: validText(item.position, 120, `Досье № ${index + 1}, должность`),
         department: validText(item.department, 120, `Досье № ${index + 1}, подразделение`),
         power: validText(item.power, 300, `Досье № ${index + 1}, суперсила`),
-        traits: item.traits.map((trait, traitIndex) => validText(trait, 180, `Досье № ${index + 1}, характеристика ${traitIndex + 1}`)),
+        traits: item.traits.map((trait, traitIndex) => validText(trait, 180, `Досье № ${index + 1}, качество ${traitIndex + 1}`)),
         award: validText(item.award, 120, `Досье № ${index + 1}, награда`),
         awardReason: item.awardReason == null ? DEFAULT_AWARD_REASON : validText(item.awardReason, MAX_REASON_CHARS, `Досье № ${index + 1}, причина награждения`),
         photo,
@@ -114,7 +114,7 @@
       if (typeof content !== 'string' || content.length > (field === 'power' ? 300 : field === 'awardReason' ? MAX_REASON_CHARS : 120)) throw new Error('Повреждены поля черновика.');
       draft[field] = content;
     }
-    if (!Array.isArray(value.traits) || value.traits.length !== 3 || value.traits.some((trait) => typeof trait !== 'string' || trait.length > 180)) throw new Error('Повреждены характеристики черновика.');
+    if (!Array.isArray(value.traits) || value.traits.length !== 3 || value.traits.some((trait) => typeof trait !== 'string' || trait.length > 180)) throw new Error('Повреждены качества черновика.');
     draft.traits = [...value.traits];
     draft.photo = value.photo == null ? null : value.photo;
     if (draft.photo !== null && draft.photo !== '' && (typeof draft.photo !== 'string' || draft.photo.length > MAX_PHOTO_CHARS || !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(draft.photo))) throw new Error('Повреждена фотография черновика.');
@@ -442,10 +442,20 @@
     const card = document.createElement('div');
     card.className = 'trait-card';
     const number = document.createElement('small');
-    number.textContent = `0${index + 1} / ПРИЗНАК`;
-    const description = document.createElement('span');
-    description.textContent = value;
-    card.append(number, description);
+    number.textContent = `0${index + 1} / КАЧЕСТВО ЗАФИКСИРОВАНО`;
+    const match = value.match(/^(.+?)\s*(?:[—–]\s*|:\s+)(.+)$/u);
+    const copy = document.createElement('div');
+    copy.className = 'trait-copy';
+    const quality = document.createElement('strong');
+    quality.className = 'trait-quality';
+    quality.textContent = match ? match[1].trim() : value;
+    copy.append(quality);
+    if (match) {
+      const description = document.createElement('span');
+      description.textContent = match[2].trim();
+      copy.append(description);
+    }
+    card.append(number, copy);
     return card;
   }
 

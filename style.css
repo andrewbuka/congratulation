@@ -81,3 +81,10 @@
   .award-reason.is-extensive{font-size:clamp(21px,4vw,29px)}
   .ceremony-screen.showing-reveal .ceremony-controls{position:static;margin-top:18px}
 }
+.trait-card small{font-size:9px;letter-spacing:.11em;line-height:1.3}
+.trait-card:after{background:linear-gradient(90deg,var(--gold),transparent)}
+.trait-copy{display:flex;flex-direction:column;gap:6px;min-width:0}
+.trait-quality{color:var(--gold);font-size:clamp(17px,1.45vw,23px);line-height:1.12;letter-spacing:-.025em;overflow-wrap:anywhere;text-shadow:0 0 18px #e6c57935}
+.trait-copy span{font-size:clamp(12px,1vw,16px);line-height:1.3;color:#d8e9e8}
+@media(max-height:950px) and (min-width:761px){.trait-card{gap:8px}.trait-quality{font-size:clamp(16px,1.3vw,20px)}}
+@media(max-width:760px){.trait-card{flex-direction:column;align-items:stretch;gap:8px}}
